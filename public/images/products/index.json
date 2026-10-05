@@ -1,0 +1,114 @@
+{
+  "ms-rectangular-duct": [
+    "/images/products/ms-rectangular-duct-1.jpg",
+    "/images/products/ms-rectangular-duct-2.jpg",
+    "/images/products/ms-rectangular-duct-3.jpg",
+    "/images/products/ms-rectangular-duct-4.jpg",
+    "/images/products/ms-rectangular-duct-5.jpg",
+    "/images/products/ms-rectangular-duct-6.jpg"
+  ],
+  "ss-rectangular-duct": [
+    "/images/products/ss-rectangular-duct-1.jpg",
+    "/images/products/ss-rectangular-duct-2.jpg",
+    "/images/products/ss-rectangular-duct-3.jpg",
+    "/images/products/ss-rectangular-duct-4.jpg",
+    "/images/products/ss-rectangular-duct-5.jpg",
+    "/images/products/ss-rectangular-duct-6.jpg"
+  ],
+  "ms-round-duct": [
+    "/images/products/ms-round-duct-1.jpg",
+    "/images/products/ms-round-duct-2.jpg",
+    "/images/products/ms-round-duct-3.jpg",
+    "/images/products/ms-round-duct-4.jpg",
+    "/images/products/ms-round-duct-5.jpg",
+    "/images/products/ms-round-duct-6.jpg"
+  ],
+  "ss-round-duct": [
+    "/images/products/ss-round-duct-1.jpg",
+    "/images/products/ss-round-duct-2.jpg",
+    "/images/products/ss-round-duct-3.jpg",
+    "/images/products/ss-round-duct-4.jpg",
+    "/images/products/ss-round-duct-5.jpg",
+    "/images/products/ss-round-duct-6.jpg"
+  ],
+  "flanged-duct": [
+    "/images/products/flanged-duct-1.jpg",
+    "/images/products/flanged-duct-2.jpg",
+    "/images/products/flanged-duct-3.jpg",
+    "/images/products/flanged-duct-4.jpg",
+    "/images/products/flanged-duct-5.jpg",
+    "/images/products/flanged-duct-6.jpg"
+  ],
+  "angle-frame-duct": [
+    "/images/products/angle-frame-duct-1.jpg",
+    "/images/products/angle-frame-duct-2.jpg",
+    "/images/products/angle-frame-duct-3.jpg",
+    "/images/products/angle-frame-duct-4.jpg",
+    "/images/products/angle-frame-duct-5.jpg",
+    "/images/products/angle-frame-duct-6.jpg"
+  ],
+  "kitchen-exhaust-duct": [
+    "/images/products/kitchen-exhaust-duct-1.jpg",
+    "/images/products/kitchen-exhaust-duct-2.jpg",
+    "/images/products/kitchen-exhaust-duct-3.jpg",
+    "/images/products/kitchen-exhaust-duct-4.jpg",
+    "/images/products/kitchen-exhaust-duct-5.jpg",
+    "/images/products/kitchen-exhaust-duct-6.jpg"
+  ],
+  "fire-rated-duct": [
+    "/images/products/fire-rated-duct-1.jpg",
+    "/images/products/fire-rated-duct-2.jpg",
+    "/images/products/fire-rated-duct-3.jpg",
+    "/images/products/fire-rated-duct-4.jpg",
+    "/images/products/fire-rated-duct-5.jpg",
+    "/images/products/fire-rated-duct-6.jpg"
+  ],
+  "cisbond-fr-802-coating": [
+    "/images/products/cisbond-fr-802-coating-1.jpg",
+    "/images/products/cisbond-fr-802-coating-2.jpg",
+    "/images/products/cisbond-fr-802-coating-3.jpg",
+    "/images/products/cisbond-fr-802-coating-4.jpg",
+    "/images/products/cisbond-fr-802-coating-5.jpg",
+    "/images/products/cisbond-fr-802-coating-6.jpg"
+  ],
+  "volume-control-damper": [
+    "/images/products/volume-control-damper-1.jpg",
+    "/images/products/volume-control-damper-2.jpg",
+    "/images/products/volume-control-damper-3.jpg",
+    "/images/products/volume-control-damper-4.jpg",
+    "/images/products/volume-control-damper-5.jpg",
+    "/images/products/volume-control-damper-6.jpg"
+  ],
+  "duct-flange": [
+    "/images/products/duct-flange-1.jpg",
+    "/images/products/duct-flange-2.jpg",
+    "/images/products/duct-flange-3.jpg",
+    "/images/products/duct-flange-4.jpg",
+    "/images/products/duct-flange-5.jpg",
+    "/images/products/duct-flange-6.jpg"
+  ],
+  "access-door": [
+    "/images/products/access-door-1.jpg",
+    "/images/products/access-door-2.jpg",
+    "/images/products/access-door-3.jpg",
+    "/images/products/access-door-4.jpg",
+    "/images/products/access-door-5.jpg",
+    "/images/products/access-door-6.jpg"
+  ],
+  "plasma-cutting-machine": [
+    "/images/products/plasma-cutting-machine-1.jpg",
+    "/images/products/plasma-cutting-machine-2.jpg",
+    "/images/products/plasma-cutting-machine-3.jpg",
+    "/images/products/plasma-cutting-machine-4.jpg",
+    "/images/products/plasma-cutting-machine-5.jpg",
+    "/images/products/plasma-cutting-machine-6.jpg"
+  ],
+  "bending-punching-machine": [
+    "/images/products/bending-punching-machine-1.jpg",
+    "/images/products/bending-punching-machine-2.jpg",
+    "/images/products/bending-punching-machine-3.jpg",
+    "/images/products/bending-punching-machine-4.jpg",
+    "/images/products/bending-punching-machine-5.jpg",
+    "/images/products/bending-punching-machine-6.jpg"
+  ]
+}
