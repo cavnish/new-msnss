@@ -27,8 +27,9 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
       <Navbar products={navProducts} />
       <main className="min-h-screen">{children}</main>
       {/* "Projects That Speak for Our Work" runs on every route. Home places its
-          own copy mid-page, so it is skipped here — never duplicated. */}
-      <RouteAwareSection hiddenOn={["/"]}>
+          own copy mid-page, so it is skipped here — never duplicated.
+          Product detail pages skip it too; the listing page keeps it. */}
+      <RouteAwareSection hiddenOn={["/"]} hiddenDescendantsOf={["/products"]}>
         <ProjectBentoSection />
       </RouteAwareSection>
       {/* Exactly one client logo strip per page: pages that place their own

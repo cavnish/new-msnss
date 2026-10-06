@@ -16,15 +16,23 @@ import type { ReactNode } from "react";
 export function RouteAwareSection({
   children,
   hiddenOn = [],
+  hiddenDescendantsOf = [],
 }: {
   children: ReactNode;
   hiddenOn?: string[];
+  /**
+   * Hide only on descendant routes, keeping the entry path itself visible.
+   * E.g. "/products" hides /products/anything but not /products.
+   */
+  hiddenDescendantsOf?: string[];
 }) {
   const pathname = usePathname() || "";
-  const hidden = hiddenOn.some((entry) => {
-    if (entry === "/") return pathname === "/";
-    return pathname === entry || pathname.startsWith(`${entry}/`);
-  });
+  const hidden =
+    hiddenOn.some((entry) => {
+      if (entry === "/") return pathname === "/";
+      return pathname === entry || pathname.startsWith(`${entry}/`);
+    }) ||
+    hiddenDescendantsOf.some((entry) => pathname.startsWith(`${entry}/`));
   if (hidden) return null;
   return <>{children}</>;
 }

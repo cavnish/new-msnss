@@ -55,8 +55,6 @@ export function ProductTechnicalDetails({ product }: ProductTechnicalDetailsProp
     return null;
   }
 
-  const [lead, ...rest] = specs;
-
   return (
     <section className="border-t border-slate-200/80 bg-white py-16 sm:py-20 lg:py-24">
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
@@ -71,52 +69,26 @@ export function ProductTechnicalDetails({ product }: ProductTechnicalDetailsProp
           </p>
         </div>
 
-        {/* featured spec + card grid */}
+        {/* specification card grid */}
         {specs.length > 0 && (
-          <div className="mt-10 grid gap-4 lg:grid-cols-3">
-            {lead && (
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {specs.slice(0, 9).map((row, i) => (
               <motion.div
-                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                key={`${row.label}-${i}`}
+                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 14 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.45, ease: EASE }}
-                className="relative overflow-hidden rounded-2xl bg-ink p-7 text-white lg:row-span-2"
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.4, delay: reduce ? 0 : i * 0.04, ease: EASE }}
+                className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 transition hover:border-brand/35 hover:bg-white"
               >
-                <div className="eng-grid-dark absolute inset-0 opacity-30" aria-hidden="true" />
-                <div className="relative">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-300">
-                    {lead.label}
-                  </p>
-                  <p className="mt-4 text-[28px] font-extrabold leading-tight text-white sm:text-[32px]">
-                    {lead.value || "—"}
-                  </p>
-                  <div className="mt-7 h-px w-16 bg-white/25" aria-hidden="true" />
-                  <p className="mt-5 text-sm leading-6 text-slate-300">
-                    {product.material || `Supplied in ${product.category.toLowerCase()} grade mild steel.`}
-                  </p>
-                </div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                  {row.label}
+                </p>
+                <p className="mt-2 text-[15px] font-semibold leading-snug text-ink">
+                  {row.value || "—"}
+                </p>
               </motion.div>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2 lg:content-start">
-              {rest.slice(0, 8).map((row, i) => (
-                <motion.div
-                  key={`${row.label}-${i}`}
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 14 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.4, delay: reduce ? 0 : i * 0.04, ease: EASE }}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 transition hover:border-brand/35 hover:bg-white"
-                >
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                    {row.label}
-                  </p>
-                  <p className="mt-2 text-[15px] font-semibold leading-snug text-ink">
-                    {row.value || "—"}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
+            ))}
           </div>
         )}
 

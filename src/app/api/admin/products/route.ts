@@ -30,6 +30,11 @@ export async function POST(req: Request) {
           seoTitle: b.seoTitle ?? "",
           seoDescription: b.seoDescription ?? "",
           seoKeywords: b.seoKeywords ?? "",
+          h1: b.h1 ?? "",
+          primaryKeyword: b.primaryKeyword ?? "",
+          manufacturingNarrative: b.manufacturingNarrative ?? "",
+          designFabrication: b.designFabrication ?? "",
+          supplyAcrossIndia: b.supplyAcrossIndia ?? "",
           videoUrl: b.videoUrl || null,
           updatedAt: new Date(),
         })

@@ -42,14 +42,22 @@ const nextConfig: NextConfig = {
   },
 
   // Long-lived caching for immutable build output and static media.
+  // NOTE: the /_next/static immutable header is production-only. In `next dev`
+  // Turbopack recompiles chunks on every edit — an immutable Cache-Control
+  // makes the browser reuse stale JS while the server serves fresh HTML,
+  // which surfaces as React hydration mismatches after editing files.
   async headers() {
-    return [
-      {
+    const headers: NonNullable<Awaited<ReturnType<NonNullable<NextConfig["headers"]>>>> =
+      [];
+    if (process.env.NODE_ENV === "production") {
+      headers.push({
         source: "/_next/static/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
-      },
+      });
+    }
+    headers.push(
       {
         source: "/images/:path*",
         headers: [
@@ -62,8 +70,9 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
-      },
-    ];
+      }
+    );
+    return headers;
   },
 
   // Keep the shipped client bundle lean: no source maps in production.

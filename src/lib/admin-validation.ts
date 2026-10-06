@@ -2,6 +2,10 @@ import { z } from "zod";
 
 export const specRowInput = z.object({ label: z.string().trim().min(1).max(120), value: z.string().trim().min(1).max(500) });
 export const faqRowInput = z.object({ question: z.string().trim().min(2).max(255), answer: z.string().trim().min(2).max(3000) });
+export const appDetailInput = z.object({
+  title: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(3000).optional().default(""),
+});
 
 /** Image or video entry for the per-product "Fabrication & Project Installations" showcase. */
 export const showcaseItemInput = z.object({
@@ -46,6 +50,18 @@ export const productInput = z.object({
   showOnHome: z.boolean().default(true),
   homeOrder: z.coerce.number().int().default(0),
   showcaseItems: z.array(showcaseItemInput).default([]),
+  // Editorial / long-form content (Content & SEO tab in the admin editor).
+  // These columns exist in the products table — without them here, admin edits
+  // would be silently stripped by validation and never reach the database.
+  h1: z.string().trim().max(500).optional().nullable().default(""),
+  primaryKeyword: z.string().trim().max(255).optional().nullable().default(""),
+  secondaryKeywords: z.array(z.string().max(255)).default([]),
+  seoTags: z.array(z.string().max(160)).default([]),
+  faqs: z.array(faqRowInput).default([]),
+  applicationDetails: z.array(appDetailInput).default([]),
+  manufacturingNarrative: z.string().trim().max(10000).optional().nullable().default(""),
+  designFabrication: z.string().trim().max(10000).optional().nullable().default(""),
+  supplyAcrossIndia: z.string().trim().max(10000).optional().nullable().default(""),
 });
 
 export const serviceInput = z.object({

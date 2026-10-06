@@ -303,7 +303,18 @@ export const getLogoRowClients = cache(async (): Promise<Client[]> =>
 
 /* ───────────────────── admin-managed section imagery ─────────────────────── */
 
-export const SECTION_KEYS = ["why-choose", "why-choose-map", "applications"] as const;
+export const SECTION_KEYS = [
+  "why-choose",
+  "why-choose-map",
+  "applications",
+  // Single-image home slots — first active row wins, built-in default otherwise.
+  "home-facility",
+  "home-brief-bg",
+  "home-about-main",
+  "home-about-overlay",
+  "home-fire-rated",
+  "home-cta-bg",
+] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 /**

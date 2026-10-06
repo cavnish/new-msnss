@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { cloudinaryImageLoader } from "@/lib/cloudinary-loader";
+import { isCloudinaryUrl } from "@/lib/cloudinary-url";
 
 export function AdminPage({
   title,
@@ -316,7 +317,18 @@ export function ImageField({
         {value ? (
           <div className="w-full">
             <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <Image src={value} alt={label} fill sizes="96px" loader={cloudinaryImageLoader} className="object-cover" />
+              {/* Cloudinary assets use the responsive loader; local uploads
+                  (/api/media, /uploads) and other URLs use Next's default
+                  optimizer. Passing the Cloudinary loader for those warns
+                  "loader does not implement width" and skips resizing. */}
+              <Image
+                src={value}
+                alt={label}
+                fill
+                sizes="96px"
+                loader={isCloudinaryUrl(value) ? cloudinaryImageLoader : undefined}
+                className="object-cover"
+              />
             </div>
             <span className="mt-2 block text-xs font-medium text-brand">{uploading ? `Uploading… ${progress}%` : "Click or drop to replace"}</span>
           </div>
@@ -704,7 +716,7 @@ export function ImageListEditor({
                         alt=""
                         fill
                         sizes="104px"
-                        loader={cloudinaryImageLoader}
+                        loader={isCloudinaryUrl(url) ? cloudinaryImageLoader : undefined}
                         className="object-cover"
                       />
                     ) : filled ? (
@@ -798,7 +810,7 @@ export function ImageListEditor({
                   alt=""
                   fill
                   sizes="96px"
-                  loader={cloudinaryImageLoader}
+                  loader={isCloudinaryUrl(url) ? cloudinaryImageLoader : undefined}
                   className="object-cover"
                 />
               ) : (
@@ -1025,6 +1037,366 @@ export function HomePlacementFields({
           />
         </label>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Uploads image files to the simple local product-upload endpoint
+ * (`/api/admin/products/upload`), which stores them under
+ * `public/uploads/products/[product-slug]/` and returns public URLs.
+ * Cloudinary is never involved — uploads keep working with no external
+ * dependencies, while pre-existing Cloudinary/external URLs keep rendering.
+ */
+async function uploadLocalProductImages(files: File[], slug?: string): Promise<string[]> {
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  if (slug) form.append("slug", slug);
+  const res = await fetch("/api/admin/products/upload", { method: "POST", body: form });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.error || "Upload failed. Please try again.");
+  }
+  const urls = (data.urls ?? (data.url ? [data.url] : [])).filter(Boolean);
+  if (!urls.length) throw new Error("Upload returned no images.");
+  return urls;
+}
+
+/**
+ * Hero gallery editor for a product — the exact images (and order) rendered
+ * by the public product-page hero. Position 1 is the main hero image;
+ * the rest are thumbnails, in order.
+ *
+ * Upload-first: [+ Add Images] accepts multiple local files, stored via the
+ * local upload endpoint. Per image: preview, replace, delete, drag-and-drop
+ * reorder and "set as primary". Existing Cloudinary/external URLs are shown
+ * as-is and preserved — there is no manual URL field.
+ */
+export function ProductHeroImageEditor({
+  value,
+  onChange,
+  max = 6,
+  slug,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+  max?: number;
+  slug?: string;
+}) {
+  const rows = value ?? [];
+  const full = rows.length >= max;
+  const [busy, setBusy] = useState(false);
+  const [replacing, setReplacing] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const addRef = useRef<HTMLInputElement>(null);
+
+  const move = (idx: number, to: number) => {
+    if (to < 0 || to >= rows.length || to === idx) return;
+    onChange(moveItem(rows, idx, to));
+    setStatus(`Image moved to hero position ${to + 1} of ${rows.length}`);
+  };
+
+  const setPrimary = (idx: number) => {
+    if (idx === 0) return;
+    onChange(moveItem(rows, idx, 0));
+    setStatus("Hero position 1 updated — this image is now the main hero image");
+  };
+
+  const remove = (idx: number) => {
+    onChange(rows.filter((_, i) => i !== idx));
+    setStatus(`Hero image at position ${idx + 1} deleted`);
+  };
+
+  const addFiles = async (files: FileList | null) => {
+    const picked = Array.from(files ?? []).filter((f) => f.size > 0);
+    if (!picked.length) return;
+    const room = max - rows.length;
+    if (room <= 0) {
+      setError(`Hero gallery is full (${max}/${max}). Delete an image to add another.`);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const urls = await uploadLocalProductImages(picked.slice(0, room), slug);
+      onChange([...rows, ...urls].slice(0, max));
+      setStatus(
+        urls.length > 1
+          ? `${urls.length} images uploaded to the hero gallery`
+          : "Image uploaded to the hero gallery"
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const replaceFile = async (idx: number, file: File | undefined) => {
+    if (!file || file.size === 0) return;
+    setReplacing(idx);
+    setError("");
+    try {
+      const [url] = await uploadLocalProductImages([file], slug);
+      onChange(rows.map((row, i) => (i === idx ? url : row)));
+      setStatus(`Hero image at position ${idx + 1} replaced`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed. Please try again.");
+    } finally {
+      setReplacing(null);
+    }
+  };
+
+  const handleDrop = (idx: number) => {
+    if (dragIdx !== null && dragIdx !== idx) move(dragIdx, idx);
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-sm font-semibold text-ink">Hero Images</span>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
+            full ? "bg-brand text-white" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {rows.length} / {max} images
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => addRef.current?.click()}
+        disabled={busy || full}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand px-4 py-4 text-sm font-bold text-brand transition hover:bg-brand/5 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+      >
+        {busy ? "Uploading…" : "+ Add Images"}
+      </button>
+      <input
+        ref={addRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/avif"
+        multiple
+        className="hidden"
+        aria-label="Add hero images"
+        onChange={(e) => {
+          void addFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <p className="mt-1.5 text-xs text-slate-500">
+        Select multiple local images at once. Position 1 is the main hero image — drag cards to reorder.
+      </p>
+
+      {rows.length > 0 ? (
+        <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((url, idx) => (
+            <li
+              key={`${url}-${idx}`}
+              draggable
+              onDragStart={() => setDragIdx(idx)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverIdx(idx);
+              }}
+              onDrop={() => handleDrop(idx)}
+              onDragEnd={() => {
+                setDragIdx(null);
+                setDragOverIdx(null);
+              }}
+              className={`relative overflow-hidden rounded-xl border-2 bg-white transition ${
+                dragIdx === idx
+                  ? "border-brand ring-2 ring-brand/20"
+                  : dragOverIdx === idx
+                    ? "border-brand bg-brand/5"
+                    : "border-slate-200"
+              }`}
+            >
+              <div className="relative aspect-[4/3] w-full bg-slate-100">
+                {url ? (
+                  <Image
+                    src={url}
+                    alt={`Hero image ${idx + 1}`}
+                    fill
+                    sizes="320px"
+                    loader={isCloudinaryUrl(url) ? cloudinaryImageLoader : undefined}
+                    className="object-cover"
+                  />
+                ) : null}
+                <span
+                  className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                    idx === 0 ? "bg-brand text-white" : "bg-ink/85 text-white"
+                  }`}
+                >
+                  {idx === 0 ? "★ Primary" : `Position ${idx + 1}`}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 p-2.5">
+                {idx !== 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setPrimary(idx)}
+                    className="rounded-md bg-brand/10 px-2.5 py-1.5 text-xs font-bold text-brand transition hover:bg-brand hover:text-white"
+                  >
+                    Set as primary
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => move(idx, idx - 1)}
+                  disabled={idx === 0}
+                  aria-label={`Move image ${idx + 1} earlier`}
+                  className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:border-brand hover:text-brand disabled:opacity-30"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(idx, idx + 1)}
+                  disabled={idx === rows.length - 1}
+                  aria-label={`Move image ${idx + 1} later`}
+                  className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:border-brand hover:text-brand disabled:opacity-30"
+                >
+                  →
+                </button>
+                <label className="cursor-pointer rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-brand ring-1 ring-slate-300 transition hover:bg-brand hover:text-white">
+                  {replacing === idx ? "Uploading…" : "Replace"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/avif"
+                    className="sr-only"
+                    aria-label={`Replace hero image ${idx + 1}`}
+                    onChange={(e) => {
+                      void replaceFile(idx, e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => remove(idx)}
+                  aria-label={`Delete hero image ${idx + 1}`}
+                  className="rounded-md bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+          No hero images yet. Add up to {max} — the public hero falls back to the main image until then.
+        </p>
+      )}
+
+      <p role="status" aria-live="polite" className="mt-2 text-xs font-medium text-brand">
+        {status}
+      </p>
+      {error ? <p className="mt-1 text-xs font-medium text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Editor for an ordered list of plain-text rows (e.g. manufacturing process
+ * steps) with add, inline edit, delete and reorder. Row order is the display
+ * order — the public page numbers steps from this sequence.
+ */
+export function OrderedListEditor({
+  label,
+  value,
+  onChange,
+  addLabel = "Add step",
+  emptyText = "No steps yet.",
+  noun = "step",
+  placeholder = "Describe this step",
+  rows: textareaRows = 2,
+}: {
+  label: string;
+  value: string[];
+  onChange: (next: string[]) => void;
+  addLabel?: string;
+  emptyText?: string;
+  noun?: string;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const rows = value ?? [];
+
+  const update = (idx: number, text: string) =>
+    onChange(rows.map((row, i) => (i === idx ? text : row)));
+
+  const remove = (idx: number) => onChange(rows.filter((_, i) => i !== idx));
+
+  const move = (idx: number, to: number) => onChange(moveItem(rows, idx, to));
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-xs font-semibold tabular-nums text-slate-400">
+          {rows.length} {rows.length === 1 ? noun : `${noun}s`}
+        </span>
+      </div>
+
+      <ol className="space-y-2">
+        {rows.map((row, idx) => (
+          <li
+            key={idx}
+            className="flex flex-wrap items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2"
+          >
+            <ReorderButtons
+              index={idx}
+              count={rows.length}
+              onMove={(to) => move(idx, to)}
+              noun={noun}
+            />
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink font-mono text-xs font-bold text-white"
+              aria-hidden="true"
+            >
+              {String(idx + 1).padStart(2, "0")}
+            </span>
+            <textarea
+              value={row}
+              onChange={(e) => update(idx, e.target.value)}
+              placeholder={placeholder}
+              aria-label={`${label} — ${noun} ${idx + 1}`}
+              rows={textareaRows}
+              className={`${inputCls} min-w-[200px] flex-1`}
+            />
+            <button
+              type="button"
+              onClick={() => remove(idx)}
+              aria-label={`Delete ${noun} ${idx + 1}`}
+              className="shrink-0 rounded bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+            >
+              Delete
+            </button>
+          </li>
+        ))}
+
+        {!rows.length && (
+          <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">
+            {emptyText}
+          </p>
+        )}
+      </ol>
+
+      <button
+        type="button"
+        onClick={() => onChange([...rows, ""])}
+        className="mt-2 rounded-md border border-dashed border-brand px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/5"
+      >
+        + {addLabel}
+      </button>
     </div>
   );
 }

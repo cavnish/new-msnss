@@ -40,7 +40,9 @@ body {
    bar's own `md:hidden`, so desktop keeps its natural full-bleed footer. */
 @media (max-width: 767.98px) {
   body {
-    padding-bottom: calc(2.75rem + env(safe-area-inset-bottom, 0px));
+    /* WhatsApp + Get Quote bottom bar height + safe-area.
+       3.25rem keeps an 8px breathing gap above the bar's visual edge. */
+    padding-bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -279,6 +281,13 @@ main {
   button {
     min-height: 40px;
   }
+}
+
+/* Overflow safety net: sections with decorative blur elements that are
+   positioned outside the container (e.g. -left-40) can sometimes escape
+   overflow-hidden on iOS Safari. This extra guard clips at the page level. */
+section {
+  max-width: 100vw;
 }
 
 @media (prefers-reduced-motion: reduce) {

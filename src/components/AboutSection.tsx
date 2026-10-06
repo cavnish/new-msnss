@@ -10,12 +10,24 @@ const FEATURES = [
   ["Installation Expertise", "Skilled on-site duct installation support."],
 ] as const;
 
-export function AboutSection() {
+export function AboutSection({
+  mainImage = "/images/factory.jpg",
+  overlayImage = "/images/hero-3.jpg",
+  mainAlt = "Inside the MSNSS HVAC duct manufacturing facility",
+  overlayAlt = "MSNSS HVAC duct installation on site",
+}: {
+  /** CMS-managed (`home-about-main`); built-in default until the admin uploads. */
+  mainImage?: string;
+  /** CMS-managed (`home-about-overlay`); built-in default until the admin uploads. */
+  overlayImage?: string;
+  mainAlt?: string;
+  overlayAlt?: string;
+}) {
   const reduce = useReducedMotion();
   const ease = [0.22, 1, 0.36, 1] as const;
 
   return (
-    <section className="relative overflow-hidden bg-white py-16 sm:py-20">
+    <section id="about" className="relative overflow-hidden bg-white py-16 sm:py-20">
       <div className="pointer-events-none absolute inset-0 eng-grid opacity-[0.35]" />
       <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-brand-light/50 blur-3xl" />
 
@@ -33,7 +45,7 @@ export function AboutSection() {
             transition={{ duration: 0.6, ease }}
             className="zoom-frame overflow-hidden rounded-xl border border-slate-200 shadow-md"
           >
-            <SmartImage src="/images/factory.jpg" alt="Inside the MSNSS HVAC duct manufacturing facility" width={1024} height={768} sizes="(max-width:1024px) 100vw, 48vw" className="h-[300px] w-full object-cover sm:h-[380px] lg:h-[420px]" />
+            <SmartImage src={mainImage} alt={mainAlt} width={1024} height={768} sizes="(max-width:1024px) 100vw, 48vw" className="h-[300px] w-full object-cover sm:h-[380px] lg:h-[420px]" />
           </motion.div>
 
           {/* Secondary overlapping image */}
@@ -44,7 +56,7 @@ export function AboutSection() {
             transition={{ duration: 0.6, delay: 0.15, ease }}
             className="zoom-frame absolute -bottom-8 -right-3 hidden w-44 overflow-hidden rounded-xl border-4 border-white shadow-xl sm:block lg:w-52"
           >
-            <SmartImage src="/images/hero-3.jpg" alt="MSNSS HVAC duct installation on site" width={448} height={320} sizes="176px" className="h-32 w-full object-cover lg:h-36" />
+            <SmartImage src={overlayImage} alt={overlayAlt} width={448} height={320} sizes="176px" className="h-32 w-full object-cover lg:h-36" />
           </motion.div>
 
           {/* Floating technical badge */}

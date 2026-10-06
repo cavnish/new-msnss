@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CTASection } from "@/components/ui";
+import { FireRatedSection } from "@/components/FireRatedSection";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductInfo } from "@/components/product/ProductInfo";
 import { ProductKeyFeatures } from "@/components/product/ProductKeyFeatures";
@@ -93,13 +94,7 @@ export default async function ProductDetailPage({
 
   const heroImage = product.imageUrl || "/images/factory.jpg";
 
-  // Hero gallery — the admin controls which images appear and in what order via
-  // the product "gallery" field (up to 6 slots). Only when it is empty do we
-  // fall back to the main image, so the hero is never blank.
-  const adminGallery = (Array.isArray(product.gallery) ? product.gallery : [])
-    .filter(Boolean)
-    .slice(0, 6);
-  const realGalleryMedia: string[] = adminGallery.length ? adminGallery : [heroImage];
+  // Hero — a single main image driven by the CMS "Main Image" field.
 
   // "Fabrication & Project Installations" — admin-managed image/video entries.
   // Falls back to a set derived from the hero media when none are configured.
@@ -123,8 +118,8 @@ export default async function ProductDetailPage({
         alt: `${product.name} — ${item.label || "project installation"}`,
         type: item.type === "video" ? ("video" as const) : ("image" as const),
       }))
-    : showcaseLabels.map((label, idx) => ({
-        url: realGalleryMedia[idx % realGalleryMedia.length] || heroImage,
+    : showcaseLabels.map((label) => ({
+        url: heroImage,
         label,
         alt: `${product.name} — ${label}`,
         type: "image" as const,
@@ -143,7 +138,7 @@ export default async function ProductDetailPage({
       "@context": "https://schema.org",
       "@type": "Product",
       name: product.name,
-      image: realGalleryMedia,
+      image: [heroImage],
       description: product.shortDescription,
       category: product.category,
       material: product.material || undefined,
@@ -203,43 +198,42 @@ export default async function ProductDetailPage({
       />
 
       {/* ── 1. PRODUCT — dominant split hero ───────────────────────────── */}
-      <section className="relative overflow-hidden bg-white py-10 sm:py-14 lg:py-16">
+      <section className="relative bg-white py-6 sm:py-8 lg:min-h-[100dvh] lg:py-[clamp(1rem,2dvh,2rem)] lg:flex lg:flex-col lg:justify-center">
         <div className="pointer-events-none absolute inset-0 eng-grid opacity-40" aria-hidden="true" />
         <div
-          className="pointer-events-none absolute -left-32 top-0 h-[420px] w-[420px] rounded-full bg-brand-light/60 blur-3xl"
+          className="pointer-events-none absolute -left-32 top-0 h-[clamp(320px,40dvh,420px)] w-[clamp(320px,40dvh,420px)] rounded-full bg-brand-light/60 blur-3xl"
           aria-hidden="true"
         />
-        <div className="relative mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-14">
-            {/* LEFT — gallery. min-w-0 stops the 6-thumbnail rail from forcing
-                the grid track wider than the viewport on small screens. */}
-            <div className="min-w-0 lg:col-span-7">
-              <ProductGallery
-                images={realGalleryMedia}
-                videoUrl={product.videoUrl || null}
-                title={product.name}
-              />
+        <div className="relative mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+          <div className="grid items-stretch gap-6 lg:grid-cols-12 lg:gap-10 xl:gap-12">
+            {/* LEFT — hero image */}
+            <div className="min-w-0 lg:col-span-7 lg:flex lg:flex-col lg:justify-center">
+              <ProductGallery image={heroImage} title={product.name} />
             </div>
 
             {/* RIGHT — product identity, detail and CTAs */}
-            <div className="min-w-0 lg:col-span-5 lg:sticky lg:top-24">
+            <div className="min-w-0 lg:col-span-5 lg:flex lg:max-h-[calc(100dvh-2*clamp(1rem,2dvh,2rem))] lg:flex-col lg:justify-center">
               <ProductInfo product={product} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 2. KEY FEATURES ────────────────────────────────────────────── */}
-      <ProductKeyFeatures product={product} />
-
-      {/* ── 3. TECHNICAL INFORMATION + WHERE IT IS USED ─────────────────── */}
+      {/* ── 2. TECHNICAL INFORMATION + WHERE IT IS USED ─────────────────── */}
       <ProductTechnicalDetails product={product} />
+
+      {/* ── 3. KEY FEATURES ────────────────────────────────────────────── */}
+      <ProductKeyFeatures product={product} />
 
       {/* ── 4. APPLICATION & RANGE SHOWCASE ────────────────────────────── */}
       <ProductShowcase images={showcaseImages} productTitle={product.name} />
 
       {/* ── 5. RELATED PRODUCTS ────────────────────────────────────────── */}
       <ProductRelated products={related} />
+
+      {/* ── 5b. FIRE-RATED SOLUTIONS — CMS-managed photo (`home-fire-rated`).
+          Skipped on the fire-rated product itself to avoid a self-link. ── */}
+      {slug !== "fire-rated-duct" && <FireRatedSection />}
 
       {/* ── 6. TRUSTED CLIENTS ─────────────────────────────────────────── */}
       <ClientLogoRow clients={clientList} />

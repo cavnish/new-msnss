@@ -62,7 +62,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
     <section
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      className="relative overflow-hidden bg-[#06111f] text-white"
+      className="relative overflow-hidden bg-[#06111f] text-white min-h-[520px] sm:min-h-[560px] lg:min-h-[600px]"
       aria-label="MSNSS hero"
     >
       {/* Background slider */}
@@ -86,7 +86,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
       <div className="pointer-events-none absolute -left-40 top-1/4 h-[480px] w-[480px] rounded-full bg-brand/15 blur-[130px]" />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto max-w-7xl px-6 py-16 lg:py-24">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 py-16 pb-24 sm:pb-20 lg:py-24 lg:pb-24">
         {/* Left */}
         <div className="max-w-3xl">
           <AnimatePresence mode="wait">
@@ -148,11 +148,11 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
 
       {/* Controls */}
       {count > 1 && (
-        <div className="absolute bottom-6 left-6 right-6 z-20">
+        <div className="absolute bottom-14 left-4 right-4 z-20 sm:bottom-6 sm:left-6 sm:right-6">
           <div className="mx-auto flex max-w-7xl items-center justify-between">
             <div className="flex items-center gap-2">
               {slides.map((s, i) => (
-                <button key={s.id} onClick={() => setCurrent(i)} aria-label={`Go to slide ${i + 1}`} aria-current={i === current} className={`h-1 rounded-full transition-all ${i === current ? "w-12 bg-brand" : "w-5 bg-white/30 hover:bg-white/60"}`} />
+                <button key={s.id} onClick={() => setCurrent(i)} aria-label={`Go to slide ${i + 1}`} aria-current={i === current} className={`rounded-full transition-all py-3 ${i === current ? "w-12" : "w-5"}`}><span className={`block h-1.5 rounded-full ${i === current ? "bg-brand" : "bg-white/30 hover:bg-white/60"}`} /></button>
               ))}
             </div>
             <div className="flex items-center gap-2">

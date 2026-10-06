@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Reveal } from "@/components/motion/Motion";
 import { Magnetic } from "@/components/Magnetic";
 import SmartImage from "@/components/SmartImage";
+import { getSectionMedia } from "@/lib/queries";
 
 /**
  * Shared UI primitives. Every public page composes its rhythm from these, so
@@ -91,15 +92,24 @@ export function PageHeader({
   );
 }
 
-export function CTASection() {
+/**
+ * Shared closing CTA band. The photographic backdrop is CMS-managed
+ * (`home-cta-bg` — first visible row wins); the built-in default applies
+ * until the admin uploads a replacement.
+ */
+export async function CTASection() {
+  const rows = await getSectionMedia("home-cta-bg").catch(() => []);
+  const customUrl = rows.length && rows[0].imageUrl ? String(rows[0].imageUrl).trim() : "";
+  const bg = customUrl || "/images/hero-2.jpg";
   return (
     <section
+      id="cta-band"
       aria-labelledby="cta-band-heading"
       className="relative isolate overflow-hidden bg-[#062043]"
     >
       {/* Photographic band — real ducting, graded deep blue */}
       <SmartImage
-        src="/images/hero-2.jpg"
+        src={bg}
         alt=""
         aria-hidden="true"
         fill

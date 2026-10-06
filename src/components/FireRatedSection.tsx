@@ -1,10 +1,16 @@
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
+import { getSectionMedia } from "@/lib/queries";
 
 /**
  * Fire-Rated Solutions — shared editorial split panel.
  * Used on the home page and product detail pages.
+ *
+ * The photo is CMS-managed (`home-fire-rated` — first visible row wins);
+ * until the admin uploads anything, the built-in default is used.
  */
+
+const DEFAULT_IMAGE = "/images/fire-rated.jpg";
 
 const USES = [
   "Smoke Exhaust",
@@ -14,14 +20,18 @@ const USES = [
   "Industrial Exhaust",
 ];
 
-export function FireRatedSection() {
+export async function FireRatedSection() {
+  const rows = await getSectionMedia("home-fire-rated").catch(() => []);
+  const row = rows[0] as { imageUrl?: string; altText?: string } | undefined;
+  const image = (row?.imageUrl && String(row.imageUrl).trim()) || DEFAULT_IMAGE;
+  const alt = (row?.altText && String(row.altText).trim()) || "MSNSS fire-rated ducting solutions";
   return (
-    <section className="bg-slate-50 py-12 sm:py-14">
+    <section id="fire-rated" className="bg-slate-50 py-12 sm:py-14">
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-12">
         <div className="group overflow-hidden rounded-2xl border border-slate-200 shadow-lg">
           <SmartImage
-            src="/images/fire-rated.jpg"
-            alt="MSNSS fire-rated ducting solutions"
+            src={image}
+            alt={alt}
             width={1024}
             height={768}
             className="h-full w-full object-cover transition duration-700 group-hover:scale-105"

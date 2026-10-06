@@ -22,6 +22,7 @@ import {
   getHomeServices,
   getLogoRowClients,
   getProducts,
+  getSectionMedia,
   getTestimonials,
 } from "@/lib/queries";
 
@@ -40,7 +41,7 @@ const PLANT_MACHINERY = [
 export default async function HomePage() {
   // Card placement for every home grid is chosen by the admin through the
   // `showOnHome` / `homeOrder` fields in the CMS.
-  const [slides, featuredProducts, services, testimonials, logoClients, allProducts] =
+  const [slides, featuredProducts, services, testimonials, logoClients, allProducts, homeImages] =
     await Promise.all([
       getHeroSlides(),
       getHomeProducts(9),
@@ -48,7 +49,32 @@ export default async function HomePage() {
       getTestimonials(),
       getLogoRowClients(),
       getProducts(),
+      Promise.all([
+        getSectionMedia("home-facility"),
+        getSectionMedia("home-brief-bg"),
+        getSectionMedia("home-about-main"),
+        getSectionMedia("home-about-overlay"),
+      ]).catch(() => [[], [], [], []]),
     ]);
+
+  // Single-image home slots: first visible CMS row wins, built-in default otherwise.
+  const firstRow = (rows: unknown) =>
+    Array.isArray(rows) && rows.length ? (rows[0] as Record<string, unknown>) : null;
+
+  const facilityRow = firstRow(homeImages[0]);
+  const facilityImage = String(facilityRow?.imageUrl || "").trim() || "/images/factory.jpg";
+  const facilityAlt = String(facilityRow?.altText || "").trim() || "Inside the MSNSS manufacturing facility";
+
+  const briefRow = firstRow(homeImages[1]);
+  const briefBg = String(briefRow?.imageUrl || "").trim() || "/images/hero-1.jpg";
+
+  const aboutMainRow = firstRow(homeImages[2]);
+  const aboutMain = String(aboutMainRow?.imageUrl || "").trim() || "/images/factory.jpg";
+  const aboutMainAlt = String(aboutMainRow?.altText || "").trim() || "Inside the MSNSS HVAC duct manufacturing facility";
+
+  const aboutOverlayRow = firstRow(homeImages[3]);
+  const aboutOverlay = String(aboutOverlayRow?.imageUrl || "").trim() || "/images/hero-3.jpg";
+  const aboutOverlayAlt = String(aboutOverlayRow?.altText || "").trim() || "MSNSS HVAC duct installation on site";
 
   return (
     <>
@@ -58,7 +84,12 @@ export default async function HomePage() {
       <ClientLogoRow clients={logoClients} />
 
       {/* About */}
-      <AboutSection />
+      <AboutSection
+        mainImage={aboutMain}
+        overlayImage={aboutOverlay}
+        mainAlt={aboutMainAlt}
+        overlayAlt={aboutOverlayAlt}
+      />
 
       {/* Products */}
       <HomeProductSection products={featuredProducts} />
@@ -73,12 +104,12 @@ export default async function HomePage() {
       <ProcessSection />
 
       {/* Manufacturing facility */}
-      <section className="bg-slate-50 py-12 sm:py-14">
+      <section id="facility" className="bg-slate-50 py-12 sm:py-14">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-12">
           <Reveal className="group overflow-hidden rounded-2xl border border-slate-200 shadow-lg">
             <SmartImage
-              src="/images/factory.jpg"
-              alt="Inside the MSNSS manufacturing facility"
+              src={facilityImage}
+              alt={facilityAlt}
               width={1024}
               height={768}
               className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
@@ -125,14 +156,14 @@ export default async function HomePage() {
       <Testimonials items={testimonials} />
 
       {/* Have a project in mind — dark brief panel + compact form */}
-      <section className="bg-slate-50 py-12 sm:py-14">
+      <section id="brief" className="bg-slate-50 py-12 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="overflow-hidden rounded-2xl shadow-premium-lg ring-1 ring-slate-900/10">
             <div className="grid gap-0 lg:grid-cols-[1.02fr_1fr]">
               {/* ── Left: dark brief panel over real plant photography ── */}
               <div className="relative isolate overflow-hidden bg-[#08213f]">
                 <SmartImage
-                  src="/images/hero-1.jpg"
+                  src={briefBg}
                   alt=""
                   aria-hidden="true"
                   fill

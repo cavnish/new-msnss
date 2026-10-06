@@ -99,22 +99,23 @@ export function ProductInfo({ product }: ProductInfoProps) {
         </ul>
       )}
 
-      {/* CTAs */}
-      <div className="mt-7 flex flex-wrap items-center gap-3">
+      {/* CTAs — always a single row on every screen size */}
+      <div className="mt-7 flex flex-nowrap items-center gap-2 sm:gap-3">
         <Link
           href={`/contact?source=product:${product.slug}`}
-          className="group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand px-7 py-3.5 text-[15px] font-semibold text-white shadow-md shadow-brand/20 transition hover:bg-brand-dark hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          className="group inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand px-4 py-3 text-[13px] font-semibold text-white shadow-md shadow-brand/20 transition hover:bg-brand-dark hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-7 sm:py-3.5 sm:text-[15px]"
         >
           Get a Quote
-          <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          <ArrowRightIcon className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
         </Link>
 
         <a
           href={`tel:${PHONE.replace(/\s+/g, "")}`}
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-[15px] font-semibold text-slate-800 shadow-sm transition hover:border-brand hover:text-brand active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          className="inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-3 text-[13px] font-semibold text-slate-800 shadow-sm transition hover:border-brand hover:text-brand active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-6 sm:py-3.5 sm:text-[15px]"
         >
-          <HeadsetIcon className="h-[18px] w-[18px] text-brand" />
-          Talk to Our Engineering Team
+          <HeadsetIcon className="h-[18px] w-[18px] shrink-0 text-brand" />
+          <span className="hidden min-[480px]:inline">Talk to Our Engineering Team</span>
+          <span className="min-[480px]:hidden">Talk to Our Team</span>
         </a>
       </div>
     </motion.div>
