@@ -40,9 +40,7 @@ body {
    bar's own `md:hidden`, so desktop keeps its natural full-bleed footer. */
 @media (max-width: 767.98px) {
   body {
-    /* WhatsApp + Get Quote bottom bar height + safe-area.
-       3.25rem keeps an 8px breathing gap above the bar's visual edge. */
-    padding-bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

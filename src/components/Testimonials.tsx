@@ -139,9 +139,9 @@ export function Testimonials({ items }: { items: Testimonial[] }) {
         </div>
 
         {pages > 1 && (
-          <div className="mt-8 flex justify-center gap-2">
+          <div className="mt-8 flex justify-center gap-2.5">
             {Array.from({ length: pages }).map((_, i) => (
-              <button key={i} onClick={() => setPage(i)} aria-label={`Go to review page ${i + 1}`} className={`h-2 rounded-full transition-all ${i === safePage ? "w-8 bg-brand" : "w-2 bg-slate-300 hover:bg-slate-400"}`} />
+              <button key={i} onClick={() => setPage(i)} aria-label={`Go to review page ${i + 1}`} className={`h-2.5 rounded-full transition-all min-w-[8px] ${i === safePage ? "w-8 bg-brand" : "w-2.5 bg-slate-300 hover:bg-slate-400 active:bg-slate-500"}`} />
             ))}
           </div>
         )}

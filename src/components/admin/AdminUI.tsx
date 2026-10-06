@@ -271,7 +271,7 @@ export function ImageField({
   value,
   onChange,
   category = "uploads",
-  hint = "PNG / JPEG / WebP. Drag & drop or click.",
+  hint = "PNG / JPEG / WebP / AVIF / GIF / BMP / TIFF / ICO / SVG. Drag & drop or click.",
 }: {
   label: string;
   value: string;
@@ -349,11 +349,11 @@ export function ImageField({
           </div>
         )}
       </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/avif"
-        className="hidden"
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
+          className="hidden"
         onChange={(e) => {
           onFiles(e.target.files);
           e.target.value = "";
@@ -495,7 +495,7 @@ export function MediaListEditor({
                   {uploading ? "Uploading…" : "Upload"}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
@@ -1180,7 +1180,7 @@ export function ProductHeroImageEditor({
       <input
         ref={addRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/avif"
+        accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
         multiple
         className="hidden"
         aria-label="Add hero images"
@@ -1269,7 +1269,7 @@ export function ProductHeroImageEditor({
                   {replacing === idx ? "Uploading…" : "Replace"}
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/avif"
+                    accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
                     className="sr-only"
                     aria-label={`Replace hero image ${idx + 1}`}
                     onChange={(e) => {

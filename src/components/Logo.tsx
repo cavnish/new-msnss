@@ -33,7 +33,7 @@ export function Logo({
         {/* The tagline is the widest part of the lockup, so it steps down on
             narrow screens — this is what keeps the header row (logo + menu
             button) from colliding at 320px. */}
-        <div className="mt-0.5 whitespace-nowrap text-[7px] font-semibold tracking-[0.1em] text-brand sm:text-[8px] sm:tracking-[0.12em]">
+        <div className="mt-0.5 text-[6px] font-semibold leading-tight tracking-[0.08em] text-brand sm:text-[7px] sm:tracking-[0.1em] md:text-[8px] md:tracking-[0.12em]">
           DUCTING / FABRICATION / INSTALLATION
         </div>
       </div>

@@ -95,7 +95,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
                 <span className="skew-x-6">M S HVAC Engineers</span>
               </span>
 
-              <h1 className="mt-6 text-4xl font-black uppercase leading-[0.98] tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="mt-6 text-[26px] font-black uppercase leading-[0.95] tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
                 <span className="block">{line1}</span>
                 {line2 && <span className="block text-[#1686e8]">{line2}</span>}
               </h1>
@@ -110,7 +110,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
 
               {/* Two equal columns below `sm` so the CTAs always sit on one
                   line (even at 320px), then the original roomy flex row. */}
-              <div className="mt-8 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-4">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:justify-start sm:gap-4">
                 <Link
                   href={slide.primaryCtaLink || "/products"}
                   className="group inline-flex min-w-0 items-center justify-center gap-2 rounded-lg bg-brand px-2.5 py-3 text-center text-xs font-bold text-white shadow-[0_10px_30px_rgba(14,124,196,.35)] transition hover:bg-brand-dark sm:px-7 sm:py-3.5 sm:text-sm"
@@ -152,7 +152,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
           <div className="mx-auto flex max-w-7xl items-center justify-between">
             <div className="flex items-center gap-2">
               {slides.map((s, i) => (
-                <button key={s.id} onClick={() => setCurrent(i)} aria-label={`Go to slide ${i + 1}`} aria-current={i === current} className={`rounded-full transition-all py-3 ${i === current ? "w-12" : "w-5"}`}><span className={`block h-1.5 rounded-full ${i === current ? "bg-brand" : "bg-white/30 hover:bg-white/60"}`} /></button>
+                <button key={s.id} onClick={() => setCurrent(i)} aria-label={`Go to slide ${i + 1}`} aria-current={i === current} className={`flex items-center justify-center rounded-full transition-all ${i === current ? "h-3.5 w-3.5 bg-brand" : "h-2.5 w-2.5 bg-white/40 hover:bg-white/70"}`} />
               ))}
             </div>
             <div className="flex items-center gap-2">

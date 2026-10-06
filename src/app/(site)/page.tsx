@@ -11,7 +11,6 @@ import { ProjectBentoSection } from "@/components/ProjectBentoSection";
 import { CTASection } from "@/components/ui";
 import { ClientLogoRow } from "@/components/ClientLogoRow";
 import { WhyChooseSection } from "@/components/WhyChooseSection";
-import { FireRatedSection } from "@/components/FireRatedSection";
 import { ProcessSection } from "@/components/ProcessSection";
 import { ApplicationsSection } from "@/components/ApplicationsSection";
 import SmartImage from "@/components/SmartImage";
@@ -96,9 +95,6 @@ export default async function HomePage() {
 
       {/* Why Industry Leaders Choose MSNSS */}
       <WhyChooseSection />
-
-      {/* Fire-Rated Solutions */}
-      <FireRatedSection />
 
       {/* Our Process */}
       <ProcessSection />

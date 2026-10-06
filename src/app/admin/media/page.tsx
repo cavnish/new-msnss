@@ -154,7 +154,7 @@ export default function MediaAdmin() {
         <span className="text-xs text-slate-400">{loading ? "…" : `${items.length} asset${items.length === 1 ? "" : "s"}`}</span>
       </div>
 
-      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif" multiple className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml" multiple className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
 
       {loading ? (
         <TableSkeleton />

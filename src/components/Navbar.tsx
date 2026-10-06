@@ -506,7 +506,7 @@ export function Navbar({ products = [] }: NavbarProps) {
       ref={headerRef}
       className={`sticky top-0 z-50 w-full border-b transition-[box-shadow,background-color,border-color] duration-300 ${
         scrolled
-          ? "border-slate-200/80 bg-white/85 shadow-premium backdrop-blur-xl"
+          ? "border-slate-200/80 bg-white shadow-premium"
           : "border-slate-200/70 bg-white/95 shadow-xs backdrop-blur"
       }`}
     >

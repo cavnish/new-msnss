@@ -14,6 +14,11 @@ const ALLOWED_IMAGES = new Map([
   ["image/png", "png"],
   ["image/webp", "webp"],
   ["image/avif", "avif"],
+  ["image/gif", "gif"],
+  ["image/bmp", "bmp"],
+  ["image/tiff", "tiff"],
+  ["image/x-icon", "ico"],
+  ["image/svg+xml", "svg"],
 ]);
 
 const ALLOWED_VIDEOS = new Map([
@@ -43,8 +48,8 @@ export async function POST(req: Request) {
       return Response.json(
         {
           success: false,
-          error:
-            "Invalid file type. Allowed: JPG, PNG, WebP, AVIF, MP4 and WebM.",
+            error:
+              "Invalid file type. Allowed: JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, SVG.",
         },
         { status: 400 }
       );

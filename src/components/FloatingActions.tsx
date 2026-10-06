@@ -16,10 +16,10 @@ export function FloatingActions() {
     <>
       {/* Mobile bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-2 border-t border-slate-200 bg-white shadow-[0_-4px_18px_rgba(0,0,0,.12)] md:hidden">
-        <a href={wa} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 border-r border-slate-200 py-3 text-xs font-bold text-green-600">
-          <WhatsAppIcon className="h-4 w-4" /> WHATSAPP
+        <a href={wa} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 border-r border-slate-200 py-3.5 text-xs font-bold text-green-600">
+          <WhatsAppIcon className="h-5 w-5" /> WHATSAPP
         </a>
-        <Link href="/contact" className="bg-brand py-3 text-center text-xs font-bold text-white">GET QUOTE</Link>
+        <Link href="/contact" className="bg-brand py-3.5 text-center text-xs font-bold text-white">GET QUOTE</Link>
       </div>
 
       {/* Desktop floating WhatsApp */}

@@ -25,7 +25,7 @@ export const BUCKETS = { clients: "client-logos", projects: "project-images", ca
 // Runtime-writable upload directory (served via /api/media/[...path]).
 export const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
 
-const IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/avif"];
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/avif", "image/gif", "image/bmp", "image/tiff", "image/x-icon", "image/svg+xml"];
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
 const CLOUDINARY_IMAGE_CATEGORIES = new Set(["clients", "projects", "products", "services", "gallery", "uploads", "logo", "homepage", "about", "machinery"]);

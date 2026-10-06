@@ -61,10 +61,6 @@ export function ProductInfo({ product }: ProductInfoProps) {
       className="flex min-w-0 flex-col"
     >
       {/* category label — the single eyebrow on this page */}
-      <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
-        {product.category}
-      </span>
-
       <h1 className="mt-3 text-[30px] font-extrabold leading-[1.1] tracking-[-0.022em] text-ink sm:text-[38px] lg:text-[44px]">
         {product.h1 || product.name}
       </h1>
@@ -99,8 +95,8 @@ export function ProductInfo({ product }: ProductInfoProps) {
         </ul>
       )}
 
-      {/* CTAs — always a single row on every screen size */}
-      <div className="mt-7 flex flex-nowrap items-center gap-2 sm:gap-3">
+      {/* CTAs — wrap to a second row only on very small screens */}
+      <div className="mt-7 flex flex-wrap justify-center items-center gap-2 sm:gap-3">
         <Link
           href={`/contact?source=product:${product.slug}`}
           className="group inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand px-4 py-3 text-[13px] font-semibold text-white shadow-md shadow-brand/20 transition hover:bg-brand-dark hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-7 sm:py-3.5 sm:text-[15px]"

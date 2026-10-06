@@ -927,7 +927,7 @@ export default function SectionsAdmin() {
                 value={slotEditor.imageUrl}
                 onChange={(url) => setSlotEditor({ ...slotEditor, imageUrl: url })}
                 category="sections"
-                hint="PNG / JPEG / WebP / AVIF. Drag & drop file or browse."
+                hint="PNG / JPEG / WebP / AVIF / GIF / BMP / TIFF / ICO / SVG. Drag & drop file or browse."
               />
 
               {/* Alt Text */}

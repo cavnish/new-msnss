@@ -22,7 +22,7 @@ function LogoCard({ client }: { client: Client }) {
     <Link
       href={`/clients/${client.slug}`}
       title={`View MSNSS portfolio for ${client.name}`}
-      className="group flex h-[80px] w-[180px] shrink-0 items-center justify-center rounded-[12px] border border-slate-200/80 bg-[#fafbfc] px-5 transition-colors duration-200 hover:border-brand/30 hover:bg-white sm:w-[185px]"
+      className="group flex h-[70px] w-[150px] shrink-0 items-center justify-center rounded-[12px] border border-slate-200/80 bg-[#fafbfc] px-4 transition-colors duration-200 hover:border-brand/30 hover:bg-white sm:h-[80px] sm:w-[180px] sm:px-5"
     >
       <SmartImage
         src={client.logoUrl}
@@ -30,8 +30,8 @@ function LogoCard({ client }: { client: Client }) {
         width={160}
         height={56}
         loading="lazy"
-        sizes="180px"
-        className="h-auto max-h-[52px] w-auto max-w-full object-contain"
+        sizes="(max-width: 639px) 150px, 180px"
+        className="h-auto max-h-[48px] w-auto max-w-full object-contain sm:max-h-[52px]"
       />
     </Link>
   );
@@ -73,24 +73,24 @@ export function ClientLogoRow({ clients }: { clients: Client[] }) {
           <span className="h-px w-8 bg-slate-300" aria-hidden="true" />
         </div>
 
-        {reduce ? (
-          /* Static, manually scrollable strip */
-          <div className="flex gap-5 overflow-x-auto pb-1 scrollbar-none">
-            {clients.map((c) => (
-              <LogoCard key={c.id} client={c} />
-            ))}
-          </div>
-        ) : (
-          <div className="marquee-pause relative">
-            {/* Edge fades so cards dissolve in and out rather than clip */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute left-0 top-0 z-10 h-full w-10 bg-gradient-to-r from-white via-white/85 to-transparent sm:w-16"
-            />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute right-0 top-0 z-10 h-full w-10 bg-gradient-to-l from-white via-white/85 to-transparent sm:w-16"
-            />
+      {reduce ? (
+        /* Static, manually scrollable strip */
+        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+          {clients.map((c) => (
+            <LogoCard key={c.id} client={c} />
+          ))}
+        </div>
+      ) : (
+        <div className="marquee-pause relative">
+          {/* Edge fades so cards dissolve in and out rather than clip */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-0 top-0 z-10 h-full w-6 bg-gradient-to-r from-white via-white/80 to-transparent sm:w-10"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 top-0 z-10 h-full w-6 bg-gradient-to-l from-white via-white/80 to-transparent sm:w-10"
+          />
 
             <div
               className="animate-marquee-right flex w-max gap-5"

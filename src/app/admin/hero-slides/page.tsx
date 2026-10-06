@@ -198,7 +198,7 @@ export default function HeroSlidesAdmin() {
           )
         ) {
           throw new Error(
-            "Please select a JPG, PNG, WebP or AVIF image."
+            "Please select a JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO or SVG image."
           );
         }
 
@@ -777,7 +777,7 @@ export default function HeroSlidesAdmin() {
                     imageInputRef
                   }
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  accept="image/jpeg,image/png,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
                   className="hidden"
                   onChange={
                     handleImageUpload
@@ -785,8 +785,7 @@ export default function HeroSlidesAdmin() {
                 />
 
                 <p className="text-center text-xs text-slate-400">
-                  JPG · PNG · WebP ·
-                  AVIF · Maximum 10MB
+                  JPG · PNG · WebP · AVIF · GIF · BMP · TIFF · ICO · SVG · Maximum 10MB
                 </p>
 
                 <div className="relative py-1">

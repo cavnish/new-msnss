@@ -14,6 +14,11 @@ const ALLOWED_IMAGES = new Map([
   ["image/png", "png"],
   ["image/webp", "webp"],
   ["image/avif", "avif"],
+  ["image/gif", "gif"],
+  ["image/bmp", "bmp"],
+  ["image/tiff", "tiff"],
+  ["image/x-icon", "ico"],
+  ["image/svg+xml", "svg"],
 ]);
 
 /**
@@ -60,13 +65,12 @@ function extFor(file: { type?: string; name?: string }): string | null {
   if (file.type && ALLOWED_IMAGES.has(file.type)) {
     return ALLOWED_IMAGES.get(file.type)!;
   }
-  // Fall back to the filename extension so pasted/renamed files still work.
   const fromName = String(file.name ?? "")
     .split(".")
     .pop()
     ?.toLowerCase();
   if (fromName === "jpg" || fromName === "jpeg") return "jpg";
-  if (fromName === "png" || fromName === "webp" || fromName === "avif") return fromName;
+  if (fromName === "png" || fromName === "webp" || fromName === "avif" || fromName === "gif" || fromName === "bmp" || fromName === "tiff" || fromName === "ico" || fromName === "svg") return fromName;
   return null;
 }
 
@@ -111,7 +115,7 @@ export async function POST(req: Request) {
         const ext = extFor({ type: file.type, name: file.name });
         if (!ext) {
           return Response.json(
-            { success: false, error: `Unsupported file type: ${file.name || "unknown"}. Allowed: JPG, PNG, WebP, AVIF.` },
+            { success: false, error: `Unsupported file type: ${file.name || "unknown"}. Allowed: JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, SVG.` },
             { status: 400 }
           );
         }
@@ -139,10 +143,10 @@ export async function POST(req: Request) {
     // ── 2. legacy raw binary body (single image) ────────────────────────
     const fileType = contentType.split(";")[0].trim();
     if (!ALLOWED_IMAGES.has(fileType)) {
-      return Response.json(
-        { success: false, error: "Invalid file type. Allowed: JPG, JPEG, PNG, WebP." },
-        { status: 400 }
-      );
+          return Response.json(
+            { success: false, error: "Invalid file type. Allowed: JPG, JPEG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, SVG." },
+            { status: 400 }
+          );
     }
 
     const arrayBuffer = await req.arrayBuffer();

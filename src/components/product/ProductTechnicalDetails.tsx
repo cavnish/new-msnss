@@ -64,7 +64,7 @@ export function ProductTechnicalDetails({ product }: ProductTechnicalDetailsProp
             Technical Information
           </h2>
           <p className="mt-3 text-[15px] leading-7 text-slate-600 sm:text-base">
-            Certified gauges, materials and joining systems for {product.name}, fabricated against approved
+            Certified gauges, materials and joining systems, fabricated against approved
             project drawings.
           </p>
         </div>
