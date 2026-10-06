@@ -28,7 +28,12 @@ export const productInput = z.object({
   installationInformation: z.array(z.string().max(255)).default([]),
   maintenanceInformation: z.array(z.string().max(255)).default([]),
   industries: z.array(z.string().max(160)).default([]),
-  gallery: z.array(z.string().max(600)).default([]),
+  // Hero/gallery slots. The public product page renders at most six, so the cap
+  // is enforced on write instead of letting extra images pile up unedited.
+  gallery: z
+    .array(z.string().trim().min(1).max(600))
+    .max(6, "A product can have up to 6 hero/gallery images.")
+    .default([]),
   videoUrl: z.string().max(600).optional().nullable(),
   relatedProductIds: z.array(z.coerce.number().int().positive()).default([]),
   featured: z.boolean().default(false),

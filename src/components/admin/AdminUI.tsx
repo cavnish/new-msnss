@@ -30,18 +30,27 @@ export function Modal({
   onClose,
   title,
   children,
+  wide = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** Wider canvas for editors that need room (e.g. image galleries). */
+  wide?: boolean;
 }) {
   if (!open) return null;
+  const titleId = "admin-modal-title";
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-8 w-full max-w-2xl rounded-xl bg-white shadow-xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={`my-8 w-full rounded-xl bg-white shadow-xl ${wide ? "max-w-5xl" : "max-w-2xl"}`}
+      >
         <div className="flex items-center justify-between border-b border-slate-200 p-5">
-          <h2 className="text-lg font-bold text-ink">{title}</h2>
+          <h2 id={titleId} className="text-lg font-bold text-ink">{title}</h2>
           <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -53,6 +62,108 @@ export function Modal({
     </div>
   );
 }
+
+export type TabDef = { id: string; label: string; hint?: string; badge?: string | number };
+
+/**
+ * Horizontal tab strip for long admin forms.
+ *
+ * Renders inside a scroll container, so it sticks to the top and stays reachable
+ * while the active panel scrolls. Follows the ARIA tabs pattern: arrow keys move
+ * between tabs, Home/End jump to the ends, and only the active tab is tabbable.
+ */
+export function TabBar({
+  tabs,
+  active,
+  onChange,
+  idPrefix,
+}: {
+  tabs: TabDef[];
+  active: string;
+  onChange: (id: string) => void;
+  idPrefix: string;
+}) {
+  const move = (delta: number) => {
+    const i = tabs.findIndex((t) => t.id === active);
+    const next = tabs[(i + delta + tabs.length) % tabs.length];
+    if (next) onChange(next.id);
+  };
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Product editor sections"
+      className="sticky top-0 z-20 -mx-5 -mt-5 mb-5 flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-5 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {tabs.map((tab, i) => {
+        const selected = tab.id === active;
+        return (
+          <button
+            key={tab.id}
+            role="tab"
+            type="button"
+            id={`${idPrefix}-tab-${tab.id}`}
+            aria-selected={selected}
+            aria-controls={`${idPrefix}-panel-${tab.id}`}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onChange(tab.id)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") { e.preventDefault(); move(1); }
+              else if (e.key === "ArrowLeft") { e.preventDefault(); move(-1); }
+              else if (e.key === "Home") { e.preventDefault(); onChange(tabs[0].id); }
+              else if (e.key === "End") { e.preventDefault(); onChange(tabs[tabs.length - 1].id); }
+            }}
+            className={`-mb-px flex shrink-0 items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
+              selected
+                ? "border-brand text-brand"
+                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800"
+            }`}
+          >
+            <span className="whitespace-nowrap">{tab.label}</span>
+            {tab.badge !== undefined && tab.badge !== "" ? (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                  selected ? "bg-brand text-white" : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {tab.badge}
+              </span>
+            ) : null}
+            {tab.hint ? <span className="sr-only">{tab.hint}</span> : null}
+            <span className="sr-only">{`tab ${i + 1} of ${tabs.length}`}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Wrapper for one tab's content, wired to the tab strip for assistive tech. */
+export function TabPanel({
+  idPrefix,
+  id,
+  active,
+  children,
+}: {
+  idPrefix: string;
+  id: string;
+  active: string;
+  children: ReactNode;
+}) {
+  if (id !== active) return null;
+  return (
+    <div
+      role="tabpanel"
+      id={`${idPrefix}-panel-${id}`}
+      aria-labelledby={`${idPrefix}-tab-${id}`}
+      tabIndex={0}
+      className="space-y-4 outline-none"
+    >
+      {children}
+    </div>
+  );
+}
+
 
 export const inputCls =
   "w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -409,6 +520,471 @@ export function MediaListEditor({
           + {addLabel} (video)
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Moves an array entry from one index to another, returning a new array. */
+function moveItem<T>(list: T[], from: number, to: number): T[] {
+  if (to < 0 || to >= list.length) return list;
+  const next = [...list];
+  const [entry] = next.splice(from, 1);
+  next.splice(to, 0, entry);
+  return next;
+}
+
+/** Up/down reorder buttons shared by the ordered admin list editors. */
+function ReorderButtons({
+  index,
+  count,
+  onMove,
+  noun,
+  onAnnounce,
+}: {
+  index: number;
+  count: number;
+  onMove: (to: number) => void;
+  noun: string;
+  onAnnounce?: (message: string) => void;
+}) {
+  const btn =
+    "flex h-8 w-8 items-center justify-center rounded-md border text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-25";
+  const go = (to: number) => {
+    onMove(to);
+    onAnnounce?.(`${noun} moved to position ${to + 1} of ${count}`);
+  };
+  return (
+    <div className="flex shrink-0 flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => go(index - 1)}
+        disabled={index === 0}
+        aria-label={`Move ${noun} ${index + 1} up to position ${index}`}
+        title="Move up"
+        className={`${btn} border-slate-300 bg-white text-slate-600 hover:border-brand hover:bg-brand hover:text-white`}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+          <path d="M6 15l6-6 6 6" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => go(index + 1)}
+        disabled={index === count - 1}
+        aria-label={`Move ${noun} ${index + 1} down to position ${index + 2}`}
+        title="Move down"
+        className={`${btn} border-slate-300 bg-white text-slate-600 hover:border-brand hover:bg-brand hover:text-white`}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Editor for an ordered, length-capped list of image URLs.
+ *
+ * Backs the product hero/gallery field: every slot can be uploaded, replaced,
+ * reordered or deleted, and the list can never grow past `max` slots. Values are
+ * plain URLs, so whatever is saved here is exactly what the CMS stores and the
+ * public page renders — nothing is generated client-side.
+ *
+ * `preview` adds an at-a-glance strip of every slot — filled and empty — in
+ * display order, mirroring what a visitor sees on the public page.
+ */
+export function ImageListEditor({
+  label,
+  value,
+  onChange,
+  category = "uploads",
+  max = 6,
+  addLabel = "Add image",
+  emptyText = "No images yet.",
+  hint,
+  preview = false,
+  previewLabel = "Preview — displayed in this order",
+}: {
+  label: string;
+  value: string[];
+  onChange: (next: string[]) => void;
+  category?: string;
+  max?: number;
+  addLabel?: string;
+  emptyText?: string;
+  hint?: string;
+  preview?: boolean;
+  previewLabel?: string;
+}) {
+  const { upload, uploading, error } = useImageUpload(category);
+  const [busy, setBusy] = useState<number | null>(null);
+  const [status, setStatus] = useState("");
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const rows = value ?? [];
+  const full = rows.length >= max;
+
+  const update = (idx: number, url: string) =>
+    onChange(rows.map((row, i) => (i === idx ? url : row)));
+
+  const remove = (idx: number) => {
+    setStatus(`Image at position ${idx + 1} deleted`);
+    onChange(rows.filter((_, i) => i !== idx));
+  };
+
+  const move = (idx: number, to: number) => onChange(moveItem(rows, idx, to));
+
+  const addSlot = () => {
+    if (full) return;
+    setStatus(`Empty position ${rows.length + 1} added`);
+    onChange([...rows, ""]);
+  };
+
+  const pickFile = async (idx: number, file: File) => {
+    setBusy(idx);
+    const url = await upload(file);
+    setBusy(null);
+    if (url) {
+      update(idx, url);
+      setStatus(`Image uploaded to position ${idx + 1}`);
+    }
+  };
+
+  const handleDragStart = (idx: number) => setDragIdx(idx);
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, idx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverIdx(idx);
+  };
+  const handleDrop = (idx: number) => {
+    if (dragIdx !== null && dragIdx !== idx) {
+      move(dragIdx, idx);
+      setStatus(`Image moved to public hero position ${idx + 1}`);
+    }
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+  const handleDragEnd = () => {
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+
+  return (
+    <div>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-sm font-semibold text-ink">{label}</span>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
+            full ? "bg-brand text-white" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {rows.length} / {max} images
+        </span>
+      </div>
+      {hint ? <p className="mb-3 text-xs leading-5 text-slate-600">{hint}</p> : null}
+
+      {/* ── position preview: every slot, in display order ─────────────── */}
+      {preview && (
+        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {previewLabel} — these positions map exactly to the public page hero
+          </p>
+          <ol className="flex flex-wrap gap-2.5">
+            {Array.from({ length: max }, (_, slot) => {
+              const url = rows[slot];
+              const filled = slot < rows.length;
+              return (
+                <li key={slot} className="w-[104px] shrink-0">
+                  <div className="relative h-[78px] w-full overflow-hidden rounded-md border border-slate-300 bg-white">
+                    {url ? (
+                      <Image
+                        src={url}
+                        alt=""
+                        fill
+                        sizes="104px"
+                        loader={cloudinaryImageLoader}
+                        className="object-cover"
+                      />
+                    ) : filled ? (
+                      <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase text-slate-400">
+                        Empty
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={addSlot}
+                        disabled={full}
+                        aria-label={`Add image at position ${slot + 1}`}
+                        className="flex h-full w-full flex-col items-center justify-center gap-0.5 text-slate-400 hover:bg-brand/5 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        <span className="text-[10px] font-semibold">Add to slot {slot + 1}</span>
+                      </button>
+                    )}
+                    <span
+                      className={`absolute left-0 top-0 px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                        url ? "bg-ink/85 text-white" : "bg-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {slot + 1}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-center text-[10px] font-medium text-slate-500">
+                    {url ? `Public hero position ${slot + 1}` : `Empty slot ${slot + 1}`}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+
+      {/* ── per-slot CRUD rows ──────────────────────────────────────────── */}
+      <div className="space-y-2">
+        {rows.map((url, idx) => (
+          <div
+            key={idx}
+            draggable
+            onDragStart={() => handleDragStart(idx)}
+            onDragOver={(e) => handleDragOver(e, idx)}
+            onDrop={() => handleDrop(idx)}
+            onDragEnd={handleDragEnd}
+            className={`flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50 p-2.5 transition ${
+              dragIdx === idx
+                ? "border-brand ring-2 ring-brand/20"
+                : dragOverIdx === idx
+                  ? "border-brand bg-brand/5"
+                  : "border-slate-200"
+            }`}
+          >
+            <span
+              className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-slate-400 hover:text-slate-600 active:cursor-grabbing"
+              title="Drag to reorder"
+              aria-hidden="true"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="9" cy="6" r="1.5" />
+                <circle cx="15" cy="6" r="1.5" />
+                <circle cx="9" cy="12" r="1.5" />
+                <circle cx="15" cy="12" r="1.5" />
+                <circle cx="9" cy="18" r="1.5" />
+                <circle cx="15" cy="18" r="1.5" />
+              </svg>
+            </span>
+
+            <ReorderButtons
+              index={idx}
+              count={rows.length}
+              onMove={(to) => move(idx, to)}
+              noun="image"
+              onAnnounce={setStatus}
+            />
+
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold tabular-nums text-white"
+              aria-hidden="true"
+            >
+              {idx + 1}
+            </span>
+
+            <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white">
+              {url ? (
+                <Image
+                  src={url}
+                  alt=""
+                  fill
+                  sizes="96px"
+                  loader={cloudinaryImageLoader}
+                  className="object-cover"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase text-slate-300">
+                  Empty
+                </span>
+              )}
+            </div>
+
+            <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+              <input
+                value={url}
+                onChange={(e) => update(idx, e.target.value)}
+                placeholder="Image URL (or upload)"
+                aria-label={`Position ${idx + 1} image URL`}
+                className={inputCls}
+              />
+              <div className="flex flex-wrap items-center gap-1.5">
+                <label className="cursor-pointer rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-brand ring-1 ring-slate-300 transition hover:bg-brand hover:text-white focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-1">
+                  {busy === idx ? "Uploading…" : url ? "Replace image" : "Upload image"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/avif"
+                    aria-label={`${busy === idx ? "Uploading" : url ? "Replace image" : "Upload image"} for position ${idx + 1}`}
+                    className="sr-only"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void pickFile(idx, f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => remove(idx)}
+                  aria-label={`Delete image at position ${idx + 1}`}
+                  className="rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                >
+                  Delete
+                </button>
+                <span className="text-xs font-medium text-slate-400">
+                  Public hero position {idx + 1}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {!rows.length && (
+          <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+            {emptyText}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={addSlot}
+          disabled={full}
+          className="rounded-md border-2 border-dashed border-brand px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+        >
+          + {addLabel}
+        </button>
+        {full ? (
+          <span className="text-xs font-medium text-slate-500">
+            Maximum of {max} images reached — delete one to add another.
+          </span>
+        ) : (
+          <span className="text-xs font-medium text-slate-500">
+            {max - rows.length} slot{max - rows.length === 1 ? "" : "s"} left.
+          </span>
+        )}
+      </div>
+
+      <p role="status" aria-live="polite" className="mt-2 text-xs font-medium text-brand">
+        {status}
+      </p>
+      {uploading ? <p className="mt-1 text-xs text-slate-500">Uploading image…</p> : null}
+      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+/** One editable label/value pair, used for product technical specifications. */
+export type KeyValueValue = { label: string; value: string };
+
+/**
+ * Editor for an ordered list of label/value rows with add, inline edit, delete
+ * and reorder. Row order is the display order — the public page renders the
+ * first row as the lead specification and the rest in sequence.
+ */
+export function KeyValueListEditor({
+  label,
+  value,
+  onChange,
+  labelPlaceholder = "Label (e.g. Steel Grade)",
+  valuePlaceholder = "Value (e.g. CRCA IS 513)",
+  addLabel = "Add row",
+  emptyText = "No rows yet.",
+  noun = "row",
+}: {
+  label: string;
+  value: KeyValueValue[];
+  onChange: (next: KeyValueValue[]) => void;
+  labelPlaceholder?: string;
+  valuePlaceholder?: string;
+  addLabel?: string;
+  emptyText?: string;
+  noun?: string;
+}) {
+  const rows = value ?? [];
+
+  const update = (idx: number, patch: Partial<KeyValueValue>) =>
+    onChange(rows.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+
+  const remove = (idx: number) => onChange(rows.filter((_, i) => i !== idx));
+
+  const move = (idx: number, to: number) => onChange(moveItem(rows, idx, to));
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-xs font-semibold tabular-nums text-slate-400">
+          {rows.length} {rows.length === 1 ? noun : `${noun}s`}
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((row, idx) => (
+          <div
+            key={idx}
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2"
+          >
+            <ReorderButtons
+              index={idx}
+              count={rows.length}
+              onMove={(to) => move(idx, to)}
+              noun={noun}
+            />
+            <span
+              className="w-5 shrink-0 text-center font-mono text-xs font-bold text-slate-400"
+              aria-hidden="true"
+            >
+              {idx + 1}
+            </span>
+            <input
+              value={row.label}
+              onChange={(e) => update(idx, { label: e.target.value })}
+              placeholder={labelPlaceholder}
+              aria-label={`${label} — ${noun} ${idx + 1} label`}
+              className={`${inputCls} w-52`}
+            />
+            <input
+              value={row.value}
+              onChange={(e) => update(idx, { value: e.target.value })}
+              placeholder={valuePlaceholder}
+              aria-label={`${label} — ${noun} ${idx + 1} value`}
+              className={`${inputCls} min-w-[180px] flex-1`}
+            />
+            <button
+              type="button"
+              onClick={() => remove(idx)}
+              aria-label={`Delete ${noun} ${idx + 1}`}
+              className="shrink-0 rounded bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+            >
+              Delete
+            </button>
+          </div>
+        ))}
+
+        {!rows.length && (
+          <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">
+            {emptyText}
+          </p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onChange([...rows, { label: "", value: "" }])}
+        className="mt-2 rounded-md border border-dashed border-brand px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/5"
+      >
+        + {addLabel}
+      </button>
     </div>
   );
 }
