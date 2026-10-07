@@ -7,7 +7,10 @@ import { mediaAssetInput } from "@/lib/admin-validation";
 
 export const dynamic = "force-dynamic";
 
-const VALID_CATEGORIES = ["clients", "projects", "catalogues", "products", "services", "gallery", "uploads", "logo", "homepage", "about", "machinery"] as const;
+// Categories map to a storage folder on disk / Cloudinary. They must be a
+// safe path segment (no slashes or dots) — validated below rather than by a
+// fixed allowlist, so new admin surfaces (e.g. "sections") never break uploads.
+const CATEGORY_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
 export async function GET(req: Request) {
   const unauth = await requireAuth();
@@ -60,14 +63,25 @@ export async function POST(req: Request) {
   try {
     const data = await req.formData();
     const file = data.get("file");
-    const category = String(data.get("category") || "uploads");
+    const rawCategory = String(data.get("category") || "uploads").trim().toLowerCase();
     const altText = String(data.get("altText") || "").trim();
     const caption = String(data.get("caption") || "").trim();
     const folder = String(data.get("cloudinaryFolder") || "").trim() || undefined;
 
-    if (!(file instanceof File) || !(VALID_CATEGORIES as readonly string[]).includes(category)) {
-      return Response.json({ error: "A valid file and category are required." }, { status: 400 });
+    if (!(file instanceof File) || file.size === 0) {
+      return Response.json(
+        { error: "No file received. Please choose an image to upload and try again." },
+        { status: 400 }
+      );
     }
+
+    if (!CATEGORY_PATTERN.test(rawCategory)) {
+      return Response.json(
+        { error: `Invalid upload category "${rawCategory}". Use letters, numbers and dashes only.` },
+        { status: 400 }
+      );
+    }
+    const category = rawCategory;
 
     const result = await uploadAsset(file, category);
 

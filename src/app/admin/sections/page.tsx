@@ -13,15 +13,19 @@ import {
 import type { SectionMedia } from "@/db/schema";
 
 /**
- * Admin surface for the imagery used by the homepage section images and marketing sections:
- *   • Homepage Section Images (single-image slots with built-in fallbacks):
+ * Admin surface for the imagery used by the homepage and about page sections:
+ *   • Home Page tab (single-image slots with built-in fallbacks):
  *       1. home-about-main       → About section (large main photo)
  *       2. home-about-overlay    → About section (overlapping accent photo)
  *       3. home-fire-rated       → Fire-Rated Solutions split panel
  *       4. home-facility         → Inside the MSNSS Manufacturing Facility
  *       5. home-brief-bg         → "Have a project in mind" brief panel backdrop
  *       6. home-cta-bg           → Closing CTA band backdrop
- *   • Multi-image marketing sections:
+ *   • About Page tab (single-image slots with built-in fallbacks):
+ *       1. about-who-we-are      → "Who We Are" main photo
+ *       2. about-gallery-1..4    → "Collaboration at Every Stage" gallery tiles
+ *       3. about-case-study      → "Why Trust MSNSS" dark section photo
+ *   • Multi-Image Sections tab:
  *       • "Why Industry Leaders Choose MSNSS" (tiles + centre map)
  *       • "Ducting Solutions Across Critical Applications" (grid tiles)
  *
@@ -30,7 +34,7 @@ import type { SectionMedia } from "@/db/schema";
  * When deleted, slots instantly restore their built-in fallback defaults.
  */
 
-const SINGLE_SLOTS = [
+const HOME_SLOTS = [
   {
     key: "home-about-main",
     title: "About — Main Photo",
@@ -93,7 +97,79 @@ const SINGLE_SLOTS = [
   },
 ] as const;
 
-type SingleSlot = (typeof SINGLE_SLOTS)[number];
+const ABOUT_SLOTS = [
+  {
+    key: "about-who-we-are",
+    title: "Who We Are — Main Photo",
+    usedIn: "About → Who We Are (large photo beside intro copy)",
+    fallback: "/images/about.jpg",
+    anchor: "/about",
+    aspectRatio: "4 / 3",
+    recommendation: "Landscape 4:3 (approx. 1024 × 768 px)",
+    description: "Team / facility photograph shown next to the company introduction.",
+  },
+  {
+    key: "about-gallery-1",
+    title: "Collaboration Gallery — Tile 1",
+    usedIn: "About → Collaboration at Every Stage (tile 1 of 4)",
+    fallback: "/images/about.jpg",
+    anchor: "/about",
+    aspectRatio: "16 / 9",
+    recommendation: "Landscape 16:9 (approx. 800 × 450 px)",
+    description: "Engineering team reviewing duct fabrication drawings.",
+  },
+  {
+    key: "about-gallery-2",
+    title: "Collaboration Gallery — Tile 2",
+    usedIn: "About → Collaboration at Every Stage (tile 2 of 4)",
+    fallback: "/images/factory.jpg",
+    anchor: "/about",
+    aspectRatio: "16 / 9",
+    recommendation: "Landscape 16:9 (approx. 800 × 450 px)",
+    description: "Inside the MSNSS manufacturing facility.",
+  },
+  {
+    key: "about-gallery-3",
+    title: "Collaboration Gallery — Tile 3",
+    usedIn: "About → Collaboration at Every Stage (tile 3 of 4)",
+    fallback: "/images/hero-3.jpg",
+    anchor: "/about",
+    aspectRatio: "16 / 9",
+    recommendation: "Landscape 16:9 (approx. 800 × 450 px)",
+    description: "On-site HVAC duct installation by MSNSS.",
+  },
+  {
+    key: "about-gallery-4",
+    title: "Collaboration Gallery — Tile 4",
+    usedIn: "About → Collaboration at Every Stage (tile 4 of 4)",
+    fallback: "/images/fire-rated.jpg",
+    anchor: "/about",
+    aspectRatio: "16 / 9",
+    recommendation: "Landscape 16:9 (approx. 800 × 450 px)",
+    description: "Fire-rated MS & SS duct coating in progress.",
+  },
+  {
+    key: "about-case-study",
+    title: "Why Trust MSNSS — Feature Photo",
+    usedIn: "About → Why Trust MSNSS (dark section, right-side photo)",
+    fallback: "/images/hero-3.jpg",
+    anchor: "/about",
+    aspectRatio: "4 / 3",
+    recommendation: "Landscape 4:3 (approx. 1024 × 768 px)",
+    description: "Quality / installation photograph reinforcing the trust section.",
+  },
+] as const;
+
+type SingleSlot = (typeof HOME_SLOTS)[number] | (typeof ABOUT_SLOTS)[number];
+
+const SINGLE_SLOTS: readonly SingleSlot[] = [...HOME_SLOTS, ...ABOUT_SLOTS];
+
+const SLOT_TABS = [
+  { id: "home-slots", label: "Home Page", slots: [...HOME_SLOTS] as readonly SingleSlot[], countLabel: "6 slots" },
+  { id: "about-slots", label: "About Page", slots: [...ABOUT_SLOTS] as readonly SingleSlot[], countLabel: "6 slots" },
+] as const;
+
+type SlotTabId = (typeof SLOT_TABS)[number]["id"];
 
 const MULTI_GROUPS = [
   {
@@ -138,7 +214,7 @@ export default function SectionsAdmin() {
   const [notice, setNotice] = useState<{ text: string; type: "success" | "error" | "info" } | null>(
     null
   );
-  const [activeTab, setActiveTab] = useState<"home-slots" | "multi-sections">("home-slots");
+  const [activeTab, setActiveTab] = useState<SlotTabId | "multi-sections">("home-slots");
 
   // Single Slot Modals
   const [previewModalSlot, setPreviewModalSlot] = useState<SingleSlot | null>(null);
@@ -225,7 +301,7 @@ export default function SectionsAdmin() {
       if (!res.ok) throw new Error(data.error || "Unable to save section image");
 
       setNotice({
-        text: `“${slotEditor.slot.title}” image saved and published live to the homepage!`,
+        text: `“${slotEditor.slot.title}” image saved and published live to the website!`,
         type: "success",
       });
       setSlotEditor(null);
@@ -241,7 +317,7 @@ export default function SectionsAdmin() {
   async function handleDeleteSlot(slot: SingleSlot) {
     if (
       !confirm(
-        `Delete custom image for “${slot.title}”?\n\nThe homepage will immediately revert to the built-in fallback default (${slot.fallback}).`
+        `Delete custom image for “${slot.title}”?\n\nThe page will immediately revert to the built-in fallback default (${slot.fallback}).`
       )
     ) {
       return;
@@ -326,14 +402,16 @@ export default function SectionsAdmin() {
     await load();
   }
 
-  // Count active custom slots
-  const customCount = SINGLE_SLOTS.filter((s) =>
+  // Count active custom slots (scoped to the current tab when a slot tab is open)
+  const activeSlotTab = SLOT_TABS.find((t) => t.id === activeTab);
+  const visibleSlots: readonly SingleSlot[] = activeSlotTab ? activeSlotTab.slots : SINGLE_SLOTS;
+  const customCount = visibleSlots.filter((s) =>
     items.some((i) => i.sectionKey === s.key && i.active !== false && i.imageUrl?.trim())
   ).length;
 
   return (
     <AdminPage
-      title="Home Page Section Images"
+      title="Section Images — Home & About Pages"
       action={
         <div className="flex items-center gap-2">
           <Link
@@ -342,7 +420,16 @@ export default function SectionsAdmin() {
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
-            <span>View Live Site</span>
+            <span>View Home</span>
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <Link
+            href="/about"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+          >
+            <span>View About</span>
             <span aria-hidden="true">↗</span>
           </Link>
         </div>
@@ -356,7 +443,7 @@ export default function SectionsAdmin() {
         <span>/</span>
         <span className="font-medium text-brand">Sections</span>
         <span>/</span>
-        <span className="font-semibold text-slate-900">Home Page Section Images</span>
+        <span className="font-semibold text-slate-900">Section Images</span>
       </nav>
 
       {/* Notifications */}
@@ -390,12 +477,13 @@ export default function SectionsAdmin() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-2xl">
             <h2 className="text-base font-bold text-ink">
-              Direct Marketing &amp; Homepage Photography Controls
+              Home &amp; About Page Photography Controls
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
-              Manage the 6 core homepage section photo slots. Each slot features instant live preview,
-              drag-and-drop upload, image replace, and deletion with automatic rollback to built-in
-              defaults. Changes publish atomically to the live site via the versioned content store.
+              Manage every section photo slot on the Home and About pages. Each slot features instant
+              live preview, drag-and-drop upload, image replace, and deletion with automatic rollback
+              to built-in defaults. Changes publish atomically to the live site via the versioned
+              content store.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -405,7 +493,7 @@ export default function SectionsAdmin() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-center shadow-xs">
               <span className="block text-xl font-extrabold text-slate-600">
-                {SINGLE_SLOTS.length - customCount}
+                {visibleSlots.length - customCount}
               </span>
               <span className="text-[11px] font-semibold text-slate-500">Using Defaults</span>
             </div>
@@ -414,24 +502,27 @@ export default function SectionsAdmin() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="mb-6 flex border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab("home-slots")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
-            activeTab === "home-slots"
-              ? "border-brand text-brand"
-              : "border-transparent text-slate-600 hover:text-ink"
-          }`}
-        >
-          <span>Home Page Section Images</span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-              activeTab === "home-slots" ? "bg-brand/10 text-brand" : "bg-slate-100 text-slate-600"
+      <div className="mb-6 flex flex-wrap border-b border-slate-200">
+        {SLOT_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
+              activeTab === tab.id
+                ? "border-brand text-brand"
+                : "border-transparent text-slate-600 hover:text-ink"
             }`}
           >
-            6 slots
-          </span>
-        </button>
+            <span>{tab.label} Section Images</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                activeTab === tab.id ? "bg-brand/10 text-brand" : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {tab.countLabel}
+            </span>
+          </button>
+        ))}
         <button
           onClick={() => setActiveTab("multi-sections")}
           className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
@@ -455,11 +546,11 @@ export default function SectionsAdmin() {
 
       {loading ? (
         <TableSkeleton />
-      ) : activeTab === "home-slots" ? (
-        /* ──────────────── 6 Homepage Section Image Controls ──────────────── */
+      ) : activeSlotTab ? (
+        /* ──────────────── Page Section Image Controls ──────────────── */
         <div className="space-y-6">
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {SINGLE_SLOTS.map((slot) => {
+            {activeSlotTab.slots.map((slot) => {
               const rows = items.filter((i) => i.sectionKey === slot.key);
               // First visible row wins
               const winner = rows.find((r) => r.active !== false && r.imageUrl?.trim());
@@ -596,7 +687,7 @@ export default function SectionsAdmin() {
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-brand"
-                        title="Jump to this section on the live homepage"
+                        title="Jump to this section on the live site"
                       >
                         <span>View on site</span>
                         <span aria-hidden="true">→</span>
@@ -750,7 +841,7 @@ export default function SectionsAdmin() {
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Currently Live on Homepage
+                      Currently Live on the Page
                     </span>
                     {isCustom ? (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">

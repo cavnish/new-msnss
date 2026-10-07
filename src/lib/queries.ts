@@ -314,6 +314,13 @@ export const SECTION_KEYS = [
   "home-about-overlay",
   "home-fire-rated",
   "home-cta-bg",
+  // About page slots — first active row wins, built-in default otherwise.
+  "about-who-we-are",
+  "about-gallery-1",
+  "about-gallery-2",
+  "about-gallery-3",
+  "about-gallery-4",
+  "about-case-study",
 ] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 

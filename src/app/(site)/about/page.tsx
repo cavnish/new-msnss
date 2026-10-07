@@ -4,6 +4,9 @@ import { PageHeader, SectionHeading, CTASection, Card } from "@/components/ui";
 import { Reveal, StaggerChildren, StaggerItem } from "@/components/motion/Motion";
 import { SITE } from "@/lib/site";
 import SmartImage from "@/components/SmartImage";
+import { getSectionMedia } from "@/lib/queries";
+
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -32,16 +35,60 @@ const TRUST = [
   ["Responsive Team", "Clear communication and dependable project execution."],
 ];
 
-const COLLAB = [
+const COLLAB_FALLBACK: [string, string][] = [
   ["/images/about.jpg", "MSNSS engineering team reviewing duct fabrication drawings"],
   ["/images/factory.jpg", "Inside the MSNSS manufacturing facility"],
   ["/images/hero-3.jpg", "On-site HVAC duct installation by MSNSS"],
   ["/images/fire-rated.jpg", "Fire-rated MS & SS duct coating in progress"],
 ];
 
-const CASE_STUDY = "/images/hero-3.jpg";
+const CASE_STUDY_FALLBACK = "/images/hero-3.jpg";
 
-export default function AboutPage() {
+function firstRow(rows: unknown): Record<string, unknown> | null {
+  return Array.isArray(rows) && rows.length ? (rows[0] as Record<string, unknown>) : null;
+}
+
+function slotImage(rows: unknown, fallback: string): string {
+  const row = firstRow(rows);
+  return String(row?.imageUrl || "").trim() || fallback;
+}
+
+function slotAlt(rows: unknown, fallback: string): string {
+  const row = firstRow(rows);
+  return String(row?.altText || "").trim() || fallback;
+}
+
+export default async function AboutPage() {
+  const [whoRow, galleryRows, caseRow] = await Promise.all([
+    getSectionMedia("about-who-we-are"),
+    Promise.all([
+      getSectionMedia("about-gallery-1"),
+      getSectionMedia("about-gallery-2"),
+      getSectionMedia("about-gallery-3"),
+      getSectionMedia("about-gallery-4"),
+    ]).catch(
+      (): Record<string, unknown>[][] => [[], [], [], []]
+    ),
+    getSectionMedia("about-case-study"),
+  ]).catch(
+    (): [Record<string, unknown>[], Record<string, unknown>[][], Record<string, unknown>[]] => [
+      [],
+      [[], [], [], []],
+      [],
+    ]
+  );
+
+  const whoImage = slotImage(whoRow, "/images/about.jpg");
+  const whoAlt = slotAlt(whoRow, "About MSNSS – M S HVAC Engineers");
+
+  const COLLAB = galleryRows.map((rows, i) => [
+    slotImage(rows, COLLAB_FALLBACK[i][0]),
+    slotAlt(rows, COLLAB_FALLBACK[i][1]),
+  ] as [string, string]);
+
+  const CASE_STUDY = slotImage(caseRow, CASE_STUDY_FALLBACK);
+  const CASE_STUDY_ALT = slotAlt(caseRow, "MSNSS HVAC ducting quality and trust");
+
   return (
     <>
       <PageHeader title="About MSNSS" subtitle="Engineering better airflow through better ducting." crumb="About Us" />
@@ -50,7 +97,7 @@ export default function AboutPage() {
       <section className="bg-white py-16">
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 lg:grid-cols-2">
           <Reveal className="zoom-frame overflow-hidden rounded-2xl shadow-lg">
-            <SmartImage src="/images/about.jpg" alt="About MSNSS – M S HVAC Engineers" width={1024} height={768} sizes="(max-width:1024px) 100vw, 50vw" className="h-full w-full object-cover" />
+            <SmartImage src={whoImage} alt={whoAlt} width={1024} height={768} sizes="(max-width:1024px) 100vw, 50vw" className="h-full w-full object-cover" />
           </Reveal>
           <Reveal delay={0.1}>
             <span className="text-sm font-bold uppercase tracking-wider text-brand">Who We Are</span>
@@ -98,8 +145,8 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-6">
           <SectionHeading eyebrow="How We Work" title="Collaboration at Every Stage" subtitle="Our team works closely with consultants, contractors and project teams — from drawing to installation." />
           <StaggerChildren className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {COLLAB.map(([src, alt]) => (
-              <StaggerItem key={src}>
+            {COLLAB.map(([src, alt], idx) => (
+              <StaggerItem key={`${idx}-${src}`}>
                 <div className="zoom-frame group relative h-56 overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
                   <SmartImage src={src} alt={alt} fill sizes="(max-width:1024px) 50vw, 25vw" className="object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent opacity-0 transition group-hover:opacity-100" />
@@ -136,7 +183,7 @@ export default function AboutPage() {
               </div>
             </Reveal>
             <Reveal delay={0.1} className="zoom-frame overflow-hidden rounded-2xl shadow-2xl">
-              <SmartImage src={CASE_STUDY} alt="MSNSS HVAC ducting quality and trust" width={1024} height={768} className="h-full w-full object-cover" />
+              <SmartImage src={CASE_STUDY} alt={CASE_STUDY_ALT} width={1024} height={768} className="h-full w-full object-cover" />
             </Reveal>
           </div>
         </div>

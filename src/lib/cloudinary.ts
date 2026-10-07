@@ -35,6 +35,7 @@ export const CLOUDINARY_FOLDERS = {
   machinery: `${CLOUDINARY_ROOT}/machinery`,
   clients: `${CLOUDINARY_ROOT}/clients`,
   gallery: `${CLOUDINARY_ROOT}/gallery`,
+  sections: `${CLOUDINARY_ROOT}/sections`,
   uploads: `${CLOUDINARY_ROOT}/uploads`,
 } as const;
 
@@ -55,6 +56,7 @@ export const CLOUDINARY_FOLDER_ALIASES: Record<string, string> = {
   client: CLOUDINARY_FOLDERS.clients,
   clients: CLOUDINARY_FOLDERS.clients,
   gallery: CLOUDINARY_FOLDERS.gallery,
+  sections: CLOUDINARY_FOLDERS.sections,
   uploads: CLOUDINARY_FOLDERS.uploads,
 };
 
