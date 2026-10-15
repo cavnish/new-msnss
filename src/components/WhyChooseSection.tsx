@@ -152,11 +152,17 @@ export async function WhyChooseSection() {
         </h2>
 
         <div className="mt-8 grid grid-cols-1 gap-10 lg:mt-10 lg:grid-cols-12 lg:gap-8">
-          {/* ── Left: CTA + tiles ── */}
+          {/* ── Left: description + CTA + tiles ── */}
           <div className="lg:col-span-4">
+            <p className="max-w-md text-sm leading-relaxed text-slate-400 sm:text-[15px] sm:leading-7">
+              MS &amp; SS HVAC ducting engineered around your load requirements,
+              approved drawings and site workflow — manufactured, finished and
+              installed by one accountable team.
+            </p>
+
             <Link
               href="/products"
-              className="btn-micro inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-brand/25 hover:bg-brand-dark sm:text-sm"
+              className="btn-micro mt-7 inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-brand/25 hover:bg-brand-dark sm:text-sm"
             >
               Explore Our Solutions
               <svg

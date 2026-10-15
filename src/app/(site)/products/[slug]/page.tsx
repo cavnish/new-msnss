@@ -263,8 +263,10 @@ export default async function ProductDetailPage({
               <ProductGallery images={galleryImages} image={heroImage} title={product.name} />
             </div>
 
-            {/* RIGHT — product identity, detail and CTAs */}
-            <div className="min-w-0 lg:col-span-5 lg:flex lg:max-h-[calc(100dvh-2*clamp(1rem,2dvh,2rem))] lg:flex-col lg:justify-center">
+            {/* RIGHT — product identity, detail and CTAs. The section has a
+                min-height of 100dvh and simply grows taller on short
+                viewports rather than clipping this column. */}
+            <div className="min-w-0 lg:col-span-5 lg:flex lg:flex-col lg:justify-center">
               <ProductInfo product={product} />
             </div>
           </div>

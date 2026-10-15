@@ -2,8 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Reveal } from "@/components/motion/Motion";
 import { Magnetic } from "@/components/Magnetic";
-import SmartImage from "@/components/SmartImage";
-import { getSectionMedia } from "@/lib/queries";
+import { SectionBackdrop } from "@/components/SectionBackdrop";
 
 /**
  * Shared UI primitives. Every public page composes its rhythm from these, so
@@ -98,40 +97,22 @@ export function PageHeader({
  * until the admin uploads a replacement.
  */
 export async function CTASection() {
-  const rows = await getSectionMedia("home-cta-bg").catch(() => []);
-  const customUrl = rows.length && rows[0].imageUrl ? String(rows[0].imageUrl).trim() : "";
-  const bg = customUrl || "/images/hero-2.jpg";
   return (
     <section
       id="cta-band"
       aria-labelledby="cta-band-heading"
       className="relative isolate overflow-hidden bg-[#062043]"
     >
-      {/* Photographic band — real ducting, graded deep blue */}
-      <SmartImage
-        src={bg}
-        alt=""
-        aria-hidden="true"
-        fill
-        priority={false}
+      {/* CMS-managed photographic band — shared navy-grade design system */}
+      <SectionBackdrop
+        sectionKey="home-cta-bg"
+        fallback="/images/hero-2.jpg"
         sizes="100vw"
-        className="object-cover object-center opacity-[0.55]"
       />
-      {/* Cinematic grade: open in the centre, closed at both edges */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(100deg, rgba(5,22,48,0.97) 0%, rgba(7,34,72,0.9) 34%, rgba(9,48,96,0.7) 62%, rgba(6,26,58,0.9) 100%)",
-        }}
-      />
-      <div aria-hidden="true" className="eng-grid-dark absolute inset-0 opacity-20" />
       <div aria-hidden="true" className="animate-sheen absolute inset-0" />
-      {/* Accent rule that lifts the left edge, like the reference */}
       <div
         aria-hidden="true"
-        className="absolute bottom-0 left-0 h-1 w-40 bg-gradient-to-r from-brand via-sky-400 to-transparent sm:w-64"
+        className="absolute top-0 right-0 h-[140%] w-[32rem] translate-x-1/2 -translate-y-1/3 bg-gradient-to-l from-sky-400/10 to-transparent blur-3xl"
       />
 
       <div className="relative mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:py-14">

@@ -218,7 +218,7 @@ export function ProductKeyFeatures({ product }: ProductKeyFeaturesProps) {
         </div>
 
         {/* 3-Column Responsive Grid matching reference */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
           {cards.map((item, idx) => (
             <motion.div
               key={item.title + idx}

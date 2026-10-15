@@ -14,6 +14,7 @@ import { WhyChooseSection } from "@/components/WhyChooseSection";
 import { ProcessSection } from "@/components/ProcessSection";
 import { ApplicationsSection } from "@/components/ApplicationsSection";
 import SmartImage from "@/components/SmartImage";
+import { SectionBackdrop } from "@/components/SectionBackdrop";
 
 import {
   getHeroSlides,
@@ -129,9 +130,14 @@ export default async function HomePage() {
             />
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl lg:whitespace-nowrap">
+            <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
               Inside the MSNSS Manufacturing Facility
             </h2>
+            <p className="mt-4 text-slate-600">
+              Manufacturing is where quality begins. Our plant is fitted with
+              machines for accurate duct forming, cutting, bending, punching,
+              welding and finishing.
+            </p>
             <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-700">
               {PLANT_MACHINERY.map((m) => (
                 <div
@@ -170,34 +176,23 @@ export default async function HomePage() {
             <div className="grid gap-0 lg:grid-cols-[1.02fr_1fr]">
               {/* ── Left: dark brief panel over real plant photography ── */}
               <div className="relative isolate overflow-hidden bg-[#08213f]">
-                <SmartImage
+                <SectionBackdrop
+                  sectionKey="home-brief-bg"
                   src={briefBg}
-                  alt=""
-                  aria-hidden="true"
-                  fill
+                  fallback="/images/hero-1.jpg"
                   sizes="(min-width:1024px) 52vw, 100vw"
-                  className="object-cover object-center opacity-40"
-                />
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      "linear-gradient(115deg, rgba(6,24,50,0.97) 0%, rgba(8,33,63,0.93) 45%, rgba(10,44,82,0.82) 100%)",
-                  }}
-                />
-                <div aria-hidden="true" className="eng-grid-dark absolute inset-0 opacity-25" />
-                {/* Signature accent stripe */}
-                <div
-                  aria-hidden="true"
-                  className="absolute bottom-0 left-0 h-1.5 w-36 bg-gradient-to-r from-brand via-sky-400 to-transparent sm:w-56"
                 />
 
-                <div className="relative p-7 sm:p-11">
+                <div className="relative p-7 sm:p-9 lg:p-11">
                   <span className="eyebrow text-sky-300">We&apos;re here to help</span>
-                  <h2 className="mt-4 text-balance text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.024em] text-white sm:text-4xl lg:whitespace-nowrap">
+                  <h2 className="mt-4 text-balance text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.024em] text-white sm:text-4xl">
                     Have a project in mind?
                   </h2>
+                  <p className="mt-4 max-w-md text-pretty text-sm leading-7 text-slate-300 sm:text-base">
+                    Share your drawings, specifications and production requirements.
+                    Our engineers will review them and come back to you with a clear
+                    next step.
+                  </p>
 
                   <ul className="mt-8 space-y-3.5">
                     <li>

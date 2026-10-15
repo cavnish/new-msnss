@@ -83,7 +83,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <div><dt className="text-slate-500">Location</dt><dd className="mt-1 font-semibold">{project.location}</dd></div>
               <div><dt className="text-slate-500">Year</dt><dd className="mt-1 font-semibold">{project.year || "Not specified"}</dd></div>
               <div><dt className="text-slate-500">Sector</dt><dd className="mt-1 font-semibold">{project.category}</dd></div>
-              <div><dt className="text-slate-500">Client</dt><dd className="mt-1 font-semibold">{client ? <Link href={`/clients/${client.slug}`} className="text-brand">{client.name}</Link> : "Private / not listed"}</dd></div>
+              <div><dt className="text-slate-500">Client</dt><dd className="mt-1 font-semibold">{client ? <Link href={`/clients/${client.slug}`} className="inline-flex min-h-9 items-center text-brand">{client.name}</Link> : "Private / not listed"}</dd></div>
             </dl>
           </MotionReveal>
         </div>

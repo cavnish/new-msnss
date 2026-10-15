@@ -85,7 +85,7 @@ const HOME_SLOTS = [
   {
     key: "home-brief-bg",
     title: "Project Brief Panel Background",
-    usedIn: "Home → “Have a project in mind?” dark panel backdrop",
+    usedIn: "Home → “Have a project in mind?” panel + Contact → inquiry section",
     fallback: "/images/hero-1.jpg",
     anchor: "/#brief",
     aspectRatio: "16 / 9",
@@ -95,7 +95,7 @@ const HOME_SLOTS = [
   {
     key: "home-cta-bg",
     title: "Closing CTA Band Background",
-    usedIn: "Shared closing CTA band (home & all pages)",
+    usedIn: "Shared closing CTA band (all pages) + Clients → “Have a Similar Project?” band",
     fallback: "/images/hero-2.jpg",
     anchor: "/#cta-band",
     aspectRatio: "21 / 9",

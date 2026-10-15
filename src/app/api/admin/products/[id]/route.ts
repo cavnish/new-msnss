@@ -1,10 +1,11 @@
 import { db } from "@/db";
-import { products } from "@/db/schema";
+import { products, productImages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, slugify } from "@/lib/admin-api";
 import { productInput } from "@/lib/admin-validation";
 import { listProductImages, replaceProductImages } from "@/lib/product-images";
 import { buildSnapshotFromDatabase, enqueuePublish, withPublishSuppressed } from "@/lib/content-store";
+import { deleteMediaByUrl } from "@/lib/storage";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireAuth();
@@ -72,17 +73,16 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const u = await requireAuth();
   if (u) return u;
   const id = Number((await params).id);
-  const [existing] = await db.select({ imageUrl: products.imageUrl, gallery: products.gallery }).from(products).where(eq(products.id, id));
+  const [existing] = await db.select().from(products).where(eq(products.id, id));
+  const gallery = await db
+    .select({ url: productImages.url })
+    .from(productImages)
+    .where(eq(productImages.productId, id));
   if (existing) {
-    const urls = [existing.imageUrl, ...(existing.gallery ?? [])];
-    // Fire-and-forget Cloudinary cleanup (best effort). product_images rows are
-    // removed by the foreign-key cascade on the product delete below.
-    void Promise.allSettled(
-      urls.filter((u): u is string => Boolean(u)).map(async (url) => {
-        const { safeDeleteImage } = await import("@/lib/cloudinary");
-        return safeDeleteImage(url);
-      })
-    );
+    // product_images rows are removed by the foreign-key cascade on the product
+    // delete below, but their underlying files must be removed explicitly.
+    const urls = [existing.imageUrl, ...(existing.gallery ?? []), ...gallery.map((g) => g.url)];
+    await Promise.allSettled(urls.filter((u): u is string => Boolean(u)).map((url) => deleteMediaByUrl(url)));
   }
   await db.delete(products).where(eq(products.id, id));
   return Response.json({ ok: true });

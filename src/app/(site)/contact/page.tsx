@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { InquiryForm } from "@/components/InquiryForm";
+import { SectionBackdrop } from "@/components/SectionBackdrop";
 import { SITE } from "@/lib/site";
 import { getProducts } from "@/lib/queries";
 
@@ -21,11 +22,17 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
         subtitle="Let's discuss your drawings, specifications and production requirements."
         crumb="Contact Us"
       />
-      <section className="bg-white py-16">
+      <section className="relative isolate overflow-hidden bg-[#062043] py-16">
+        {/* Shared CMS-managed navy backdrop — same design system as the CTA band */}
+        <SectionBackdrop
+          sectionKey="home-brief-bg"
+          fallback="/images/factory.jpg"
+          sizes="100vw"
+        />
         <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-5">
-          <div className="lg:col-span-2">
-            <h2 className="text-2xl font-extrabold text-ink">Get in Touch</h2>
-            <p className="mt-3 text-slate-600">
+          <div className="relative lg:col-span-2">
+            <h2 className="text-2xl font-extrabold text-white">Get in Touch</h2>
+            <p className="mt-3 text-slate-300">
               We are ready to help with your HVAC ducting project. Reach us any
               of these ways.
             </p>
@@ -34,17 +41,17 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
               <div className="flex gap-4">
                 <div className="text-2xl">📍</div>
                 <div>
-                  <h3 className="font-bold text-ink">Plant Address</h3>
-                  <p className="mt-1 text-sm text-slate-600">{SITE.address}</p>
+                  <h3 className="font-bold text-white">Plant Address</h3>
+                  <p className="mt-1 text-sm text-slate-300">{SITE.address}</p>
                 </div>
               </div>
               <div className="flex gap-4">
                 <div className="text-2xl">📞</div>
                 <div>
-                  <h3 className="font-bold text-ink">Phone</h3>
+                  <h3 className="font-bold text-white">Phone</h3>
                   {SITE.phones.map((p) => (
                     <p key={p} className="mt-1 text-sm">
-                      <a href={`tel:${p.replace(/\s/g, "")}`} className="text-slate-600 hover:text-brand">{p}</a>
+                      <a href={`tel:${p.replace(/\s/g, "")}`} className="inline-flex min-h-11 items-center text-slate-300 hover:text-sky-300">{p}</a>
                     </p>
                   ))}
                 </div>
@@ -52,10 +59,10 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
               <div className="flex gap-4">
                 <div className="text-2xl">✉️</div>
                 <div>
-                  <h3 className="font-bold text-ink">Email</h3>
+                  <h3 className="font-bold text-white">Email</h3>
                   {SITE.emails.map((e) => (
                     <p key={e} className="mt-1 text-sm">
-                      <a href={`mailto:${e}`} className="text-slate-600 hover:text-brand">{e}</a>
+                      <a href={`mailto:${e}`} className="inline-flex min-h-11 items-center text-slate-300 hover:text-sky-300">{e}</a>
                     </p>
                   ))}
                 </div>
@@ -69,8 +76,8 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
             </div>
           </div>
 
-          <div className="lg:col-span-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 sm:p-8">
+          <div className="relative lg:col-span-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-premium-lg sm:p-8">
               <h2 className="text-2xl font-extrabold text-ink">Send an Inquiry</h2>
               <p className="mt-1 mb-6 text-sm text-slate-600">
                 Fill the form and we&apos;ll get back to you shortly.

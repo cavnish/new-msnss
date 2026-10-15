@@ -95,7 +95,18 @@ export function AboutSection({
         >
           {description ? (
             <p className="text-[15px] leading-relaxed text-slate-600 sm:text-base">{description}</p>
-          ) : null}
+          ) : (
+            <>
+              <p className="text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+                MSNSS – M S HVAC Engineers delivers complete MS &amp; SS HVAC ducting — from engineering and
+                precision manufacturing to finishing, dispatch and site installation, all from our Vasai plant.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+                Our approach combines technical expertise, controlled fabrication and reliable execution to
+                deliver ducting built for performance and long-term reliability.
+              </p>
+            </>
+          )}
 
           {/* Feature grid */}
           <div className="mt-6 grid grid-cols-2 gap-3">

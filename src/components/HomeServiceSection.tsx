@@ -74,16 +74,21 @@ export function HomeServiceSection({ services }: { services: Service[] }) {
           transition={{ duration: reduce ? 0.2 : 0.55, ease: [0.22, 1, 0.36, 1] }}
           className="mb-10 sm:mb-12 lg:mb-14"
         >
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
               <h2
                 id="home-services-heading"
-                className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl lg:whitespace-nowrap lg:text-[2.6rem] lg:leading-[1.1]"
+                className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]"
               >
                 End-to-End{" "}
                 <span className="text-gradient-brand">HVAC Ducting</span>{" "}
                 Solutions
               </h2>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-[15px] sm:leading-7">
+                From fabrication and finishing to installation, every MSNSS
+                service is delivered with the same precision, materials and
+                quality standards as our manufactured products.
+              </p>
             </div>
 
             {/* Desktop "View All" link beside the heading */}

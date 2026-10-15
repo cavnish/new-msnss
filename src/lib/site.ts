@@ -11,15 +11,20 @@ export const SITE = {
 };
 
 export const PRODUCT_LINKS = [
-  ["Spiral Flat Oval Duct", "/products/spiral-flat-oval-duct"],
-  ["Rectangular Duct", "/products/rectangular-duct"],
-  ["Spiral Round Duct", "/products/spiral-round-duct"],
-  ["Oval VCD", "/products/oval-vcd"],
-  ["Round To Square Duct", "/products/round-to-square-duct"],
-  ["Slip On Flange Duct", "/products/slip-on-flange-duct"],
-  ["MS Flange Duct", "/products/ms-flange-duct"],
-  ["LP Plenum / Terminal Box", "/products/lp-plenum-terminal-box"],
-  ["Duct Accessories", "/products/duct-accessories"],
+  ["MS Rectangular Duct", "/products/ms-rectangular-duct"],
+  ["SS Rectangular Duct", "/products/ss-rectangular-duct"],
+  ["MS Round Duct", "/products/ms-round-duct"],
+  ["SS Round Duct", "/products/ss-round-duct"],
+  ["Angle Frame Duct", "/products/angle-frame-duct"],
+  ["Flanged Duct", "/products/flanged-duct"],
+  ["Kitchen Exhaust Duct", "/products/kitchen-exhaust-duct"],
+  ["Fire Rated Duct", "/products/fire-rated-duct"],
+  ["Volume Control Damper", "/products/volume-control-damper"],
+  ["Duct Flange & Fittings", "/products/duct-flange"],
+  ["Duct Access Door", "/products/access-door"],
+  ["CISBOND-FR 802 Fire Coating", "/products/cisbond-fr-802-coating"],
+  ["Plasma Cutting Machine", "/products/plasma-cutting-machine"],
+  ["Bending & Punching Machine", "/products/bending-punching-machine"],
 ] as const;
 
 export const SOLUTION_LINKS = [

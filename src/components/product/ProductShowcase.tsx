@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import SmartImage from "@/components/SmartImage";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "./ProductIcons";
@@ -21,6 +21,24 @@ interface ProductShowcaseProps {
 export function ProductShowcase({ images, productTitle }: ProductShowcaseProps) {
   const reduce = useReducedMotion();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+
+  // Lock background scroll and close on Escape while the lightbox is open —
+  // the media gallery below behaves the same way. Declared before any early
+  // return so the hook order stays stable (rules-of-hooks).
+  useEffect(() => {
+    if (activeIdx === null) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveIdx(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [activeIdx]);
 
   if (!images || images.length === 0) return null;
 
@@ -60,7 +78,7 @@ export function ProductShowcase({ images, productTitle }: ProductShowcaseProps) 
         </div>
 
         {/* 6-Card Horizontal Showcase Grid matching reference */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {cards.map((item, idx) => (
             <motion.button
               key={`${item.url}-${idx}`}

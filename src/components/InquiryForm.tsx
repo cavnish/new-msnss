@@ -116,7 +116,7 @@ export function InquiryForm({
 
       {/* Optional detail — keeps the form one-screen tall */}
       <details className="group rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2">
-        <summary className="cursor-pointer list-none text-xs font-semibold text-slate-600 transition hover:text-brand">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs font-semibold text-slate-600 transition hover:text-brand">
           <span className="mr-1.5 inline-block text-brand transition group-open:rotate-90">▸</span>
           Add project details
           <span className="ml-1.5 font-normal text-slate-400">(optional)</span>

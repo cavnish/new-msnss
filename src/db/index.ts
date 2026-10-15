@@ -74,7 +74,7 @@ function isWriteQuery(text: unknown): boolean {
  * would otherwise re-render — and invalidate the cache of — every public page
  * for each form submission.
  */
-const PUBLISHED_TABLES = new Set([
+export const PUBLISHED_TABLES = new Set([
   "admin_users",
   "hero_slides",
   "products",

@@ -32,14 +32,19 @@ export async function ProjectBentoSection() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal className="mb-10 flex flex-col gap-6 lg:mb-12 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="max-w-2xl">
             <span className="eyebrow text-cyan-300">Our Work</span>
             <h2
               id="projects-that-speak-heading"
-              className="mt-4 text-balance text-[1.85rem] font-extrabold leading-[1.1] tracking-[-0.024em] text-white sm:text-4xl lg:whitespace-nowrap lg:text-[2.9rem]"
+              className="mt-4 text-balance text-[1.85rem] font-extrabold leading-[1.1] tracking-[-0.024em] text-white sm:text-4xl lg:text-[2.9rem]"
             >
               Projects That Speak for Our Work
             </h2>
+            <p className="mt-4 max-w-xl text-pretty text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
+              Ducting engineered, fabricated and installed across commercial,
+              hospitality, healthcare and industrial sites — measured by what we
+              delivered, not what we promised.
+            </p>
           </div>
 
           <Link

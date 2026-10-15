@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { storageEnabled } from "@/lib/storage";
+import { supabaseEnabled } from "@/lib/storage";
+import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import { getPublishStatus } from "@/lib/content-store";
 import { PublishPanel } from "@/components/admin/PublishPanel";
 
@@ -18,6 +19,13 @@ export default async function AdminHealthPage() {
 
   const publish = await getPublishStatus();
 
+  const cloudinaryReady = isCloudinaryConfigured();
+  const mediaProvider = cloudinaryReady
+    ? "Cloudinary"
+    : supabaseEnabled
+      ? "Supabase Storage"
+      : "local disk";
+
   const checks = [
     {
       name: "PostgreSQL database",
@@ -31,8 +39,15 @@ export default async function AdminHealthPage() {
     },
     {
       name: "Media storage",
-      ready: storageEnabled,
-      detail: "Uploads are stored on disk and served independently of the database.",
+      ready: true,
+      detail: `Uploads are stored via ${mediaProvider} and served independently of the database.`,
+    },
+    {
+      name: "Cloudinary (image CDN)",
+      ready: cloudinaryReady,
+      detail: cloudinaryReady
+        ? "Configured — new uploads are delivered and optimised through Cloudinary."
+        : "Not configured — uploads fall back to the active provider above. Set CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET to enable.",
     },
     {
       name: "Resend email",

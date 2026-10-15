@@ -201,9 +201,15 @@ export async function revalidatePublicSite(): Promise<void> {
     // invalidated.
     for (const route of PUBLIC_ROUTES) {
       try {
-        revalidatePath(route);
+        // Next.js REQUIRES an explicit type for dynamic route patterns: calling
+        // `revalidatePath("/clients/[slug]")` without one is a documented no-op
+        // (it logs a warning and purges nothing), so edited or deleted detail
+        // pages would keep serving their stale cached HTML until the ISR window
+        // elapsed. Passing "page" purges every generated path of the segment.
+        if (route.includes("[")) revalidatePath(route, "page");
+        else revalidatePath(route);
       } catch {
-        /* route never rendered / outside a request scope — best effort */
+        /* route never rendered / unsupported pattern — best effort */
       }
     }
     try {

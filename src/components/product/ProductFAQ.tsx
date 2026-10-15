@@ -29,7 +29,7 @@ export function ProductFAQ({ product }: ProductFAQProps) {
                 key={f.question}
                 className="group rounded-xl border border-slate-200 bg-white px-5 py-4 transition hover:border-brand/30"
               >
-                <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-[15px] font-semibold text-ink">
+                <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-4 py-1 text-[15px] font-semibold text-ink sm:min-h-0 sm:py-0">
                   {f.question}
                   <span className="mt-0.5 text-brand transition group-open:rotate-45" aria-hidden="true">＋</span>
                 </summary>
@@ -85,7 +85,7 @@ export function ProductFAQ({ product }: ProductFAQProps) {
               open={idx === 0}
               className="group rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all open:border-brand/30 open:shadow-md"
             >
-              <summary className="flex cursor-pointer items-center justify-between text-base font-bold text-ink hover:text-brand focus-visible:outline-none">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-between py-1 text-base font-bold text-ink hover:text-brand focus-visible:outline-none sm:min-h-0 sm:py-0">
                 <span>{faq.q}</span>
                 <span className="ml-4 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600 group-open:rotate-180 group-open:bg-brand-light group-open:text-brand transition-transform">
                   ▼

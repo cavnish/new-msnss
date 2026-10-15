@@ -42,7 +42,13 @@ for (const route of ROUTES) {
     if (r.status() >= 400 && !/favicon/i.test(r.url())) bad.push(`${r.status()} ${r.url().replace(BASE, "")}`);
   });
   page.on("requestfailed", (r) => {
-    if (!/favicon/i.test(r.url())) failed.push(`${r.failure()?.errorText} ${r.url().replace(BASE, "")}`);
+    const t = r.url();
+    if (/favicon/i.test(t)) return;
+    // Next.js starts RSC prefetches for <Link>s in the viewport and aborts the
+    // in-flight ones when the page is closed or navigated away from. That is a
+    // harness artifact, not a broken request — ignore only that exact case.
+    if (r.failure()?.errorText === "net::ERR_ABORTED" && /[?&]_rsc=/.test(t)) return;
+    failed.push(`${r.failure()?.errorText} ${t.replace(BASE, "")}`);
   });
 
   let status = "?";

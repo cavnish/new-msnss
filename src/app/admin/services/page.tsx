@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { AdminPage, Modal, Field, inputCls, EmptyState, TableSkeleton, ListInput, ImageField, HomePlacementFields } from "@/components/admin/AdminUI";
+import { AdminPage, Modal, Field, inputCls, EmptyState, TableSkeleton, ListInput, ImageField, ImageListEditor, HomePlacementFields } from "@/components/admin/AdminUI";
 import type { Service } from "@/db/schema";
 
 type FaqForm = { question: string; answer: string };
@@ -10,7 +10,7 @@ type FaqForm = { question: string; answer: string };
 type Form = {
   id?: number; name: string; slug: string; icon: string;
   shortDescription: string; fullDescription: string;
-  imageUrl: string; gallery: string; videoUrl: string; highlights: string;
+  imageUrl: string; gallery: string[]; videoUrl: string; highlights: string;
   capabilities: string; benefits: string; process: string; equipment: string; applications: string;
   faqs: FaqForm[];
   featured: boolean; seoTitle: string; seoDescription: string; seoKeywords: string;
@@ -20,7 +20,7 @@ type Form = {
 
 const empty: Form = {
   name: "", slug: "", icon: "🔧", shortDescription: "", fullDescription: "",
-  imageUrl: "", gallery: "", videoUrl: "", highlights: "",
+  imageUrl: "", gallery: [], videoUrl: "", highlights: "",
   capabilities: "", benefits: "", process: "", equipment: "", applications: "", faqs: [],
   featured: false, seoTitle: "", seoDescription: "", seoKeywords: "", sortOrder: 0, active: false,
   showOnHome: true, homeOrder: 0,
@@ -32,7 +32,7 @@ function toForm(s: Service): Form {
   return {
     id: s.id, name: s.name, slug: s.slug, icon: s.icon,
     shortDescription: s.shortDescription, fullDescription: s.fullDescription,
-    imageUrl: s.imageUrl ?? "", gallery: join(s.gallery),
+    imageUrl: s.imageUrl ?? "", gallery: s.gallery ?? [],
     videoUrl: s.videoUrl ?? "", highlights: join(s.highlights),
     capabilities: join(s.capabilities), benefits: join(s.benefits), process: join(s.process),
     equipment: join(s.equipment), applications: join(s.applications),
@@ -74,7 +74,7 @@ export default function ServicesAdmin() {
     setSaving(true);
     const payload = {
       ...form,
-      gallery: splitLines(form.gallery),
+      gallery: form.gallery,
       highlights: splitLines(form.highlights),
       capabilities: splitLines(form.capabilities),
       benefits: splitLines(form.benefits),
@@ -181,11 +181,17 @@ export default function ServicesAdmin() {
               </div>
             </div>
 
-            <Field label="Photo Gallery (one image URL per line)">
-              <textarea rows={3} className={inputCls} value={form.gallery} onChange={(e) => setForm({ ...form, gallery: e.target.value })} placeholder="https://res.cloudinary.com/.../photo-1.jpg" />
-            </Field>
+            <ImageListEditor
+              label="Photo Gallery"
+              value={form.gallery}
+              onChange={(gallery) => setForm({ ...form, gallery })}
+              category="services"
+              max={8}
+              addLabel="Add gallery image"
+              emptyText="No gallery images yet."
+              hint="Upload, replace, reorder or delete gallery images. They appear in this order on the solution page."
+            />
             <Field label="Video URL (MP4/WebM link)"><input className={inputCls} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} placeholder="https://.../service-demo.mp4" /></Field>
-
             <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <summary className="cursor-pointer text-sm font-semibold text-slate-700">SEO Settings</summary>
               <div className="mt-3 space-y-3">

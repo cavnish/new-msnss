@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { isCloudinaryConfigured, uploadCloudinaryImage, safeDeleteImage, resolveCloudinaryFolder } from "@/lib/cloudinary";
+import { isCloudinaryUrl } from "@/lib/cloudinary-url";
 
 /**
  * Unified media storage.
@@ -115,4 +116,38 @@ export async function deleteAsset(bucket: string, assetPath: string) {
   if (!supabase) return;
   const { error } = await supabase.storage.from(bucket).remove([assetPath]);
   if (error) throw error;
+}
+
+/**
+ * Best-effort removal of one media URL, wherever it is actually stored:
+ *   - Cloudinary delivery URLs → Cloudinary destroy
+ *   - `/api/media/<path>`      → runtime `uploads/` directory
+ *   - `/uploads/<path>`        → shipped `public/uploads/` directory
+ *
+ * Anything else — bundled `/images` assets, other external hosts — is
+ * deliberately left untouched. Never throws: deleting a CMS record must still
+ * succeed when its file is already gone or its host is unreachable.
+ */
+export async function deleteMediaByUrl(rawUrl: string | null | undefined): Promise<void> {
+  const value = String(rawUrl ?? "").trim();
+  if (!value) return;
+
+  if (isCloudinaryUrl(value)) {
+    await safeDeleteImage(value);
+    return;
+  }
+
+  const removeLocal = async (prefix: string, base: string): Promise<boolean> => {
+    if (!value.startsWith(prefix)) return false;
+    const rel = value.slice(prefix.length).split(/[?#]/)[0];
+    // Never follow a path that could escape the upload directory.
+    if (!rel || rel.split(/[\\/]/).includes("..")) return true;
+    await unlink(path.join(base, rel)).catch(() => {
+      /* ignore missing file */
+    });
+    return true;
+  };
+
+  if (await removeLocal("/api/media/", UPLOAD_ROOT)) return;
+  await removeLocal("/uploads/", path.join(process.cwd(), "public", "uploads"));
 }

@@ -1,7 +1,9 @@
-import { db } from "@/db";
+import { db, PUBLISHED_TABLES } from "@/db";
 import { sql } from "drizzle-orm";
 import { requireAuth } from "@/lib/admin-api";
 import { getPublishStatus } from "@/lib/content-store";
+import { existsSync } from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -64,9 +66,18 @@ async function missingColumns(table: string, columns: string[]): Promise<string[
   }
 }
 
+/**
+ * True when both the collection and item route handlers for a module are
+ * present in the source tree. This is a real measurement — the admin surface
+ * cannot expose CRUD for a module whose routes do not exist.
+ */
+function crudRoutesPresent(apiDir: string): boolean {
+  const base = path.join(process.cwd(), "src", "app", "api", "admin", apiDir);
+  return existsSync(path.join(base, "route.ts")) && existsSync(path.join(base, "[id]", "route.ts"));
+}
+
 /** A module is "working" when its table exists and no required column is absent. */
-function decide(
-  records: number | null,
+function decide(  records: number | null,
   missing: string[],
   extraFailures = 0
 ): { status: Status; summary: string } {
@@ -180,6 +191,8 @@ export async function GET() {
     key: string;
     title: string;
     adminPath: string;
+    /** Directory name under `src/app/api/admin` that serves this module. */
+    api: string;
     table: string;
     columns: string[];
   }[] = [
@@ -187,6 +200,7 @@ export async function GET() {
       key: "hero",
       title: "Hero Slides",
       adminPath: "/admin/hero-slides",
+      api: "hero-slides",
       table: "hero_slides",
       columns: ["title", "subtitle", "image_url", "sort_order", "active"],
     },
@@ -194,6 +208,7 @@ export async function GET() {
       key: "products",
       title: "Products & Plant/Machinery",
       adminPath: "/admin/products",
+      api: "products",
       table: "products",
       columns: [
         "slug",
@@ -216,6 +231,7 @@ export async function GET() {
       key: "services",
       title: "Solutions / Services",
       adminPath: "/admin/services",
+      api: "services",
       table: "services",
       columns: [
         "slug",
@@ -234,6 +250,7 @@ export async function GET() {
       key: "clients",
       title: "Clients & Logo Strip",
       adminPath: "/admin/clients",
+      api: "clients",
       table: "clients",
       columns: [
         "slug",
@@ -251,6 +268,7 @@ export async function GET() {
       key: "projects",
       title: "Projects",
       adminPath: "/admin/projects",
+      api: "projects",
       table: "projects",
       columns: [
         "slug",
@@ -270,6 +288,7 @@ export async function GET() {
       key: "project-gallery",
       title: "Project Gallery",
       adminPath: "/admin/project-gallery",
+      api: "project-images",
       table: "project_images",
       columns: ["project_id", "image_url", "alt_text", "sort_order"],
     },
@@ -277,6 +296,7 @@ export async function GET() {
       key: "testimonials",
       title: "Testimonials",
       adminPath: "/admin/testimonials",
+      api: "testimonials",
       table: "testimonials",
       columns: ["name", "content", "rating", "sort_order", "active"],
     },
@@ -284,6 +304,7 @@ export async function GET() {
       key: "sections",
       title: "Home Page Section Images",
       adminPath: "/admin/sections",
+      api: "section-media",
       table: "section_media",
       columns: ["section_key", "title", "image_url", "alt_text", "sort_order", "active"],
     },
@@ -291,6 +312,7 @@ export async function GET() {
       key: "media",
       title: "Media Library",
       adminPath: "/admin/media",
+      api: "media",
       table: "media_assets",
       columns: ["public_id", "secure_url", "folder", "sort_order"],
     },
@@ -298,6 +320,7 @@ export async function GET() {
       key: "inquiries",
       title: "Inquiries & Notes",
       adminPath: "/admin/inquiries",
+      api: "inquiries",
       table: "inquiries",
       columns: ["name", "email", "phone", "message", "status", "priority", "archived"],
     },
@@ -305,6 +328,7 @@ export async function GET() {
       key: "catalogue",
       title: "Catalogue & Leads",
       adminPath: "/admin/catalogue",
+      api: "catalogues",
       table: "catalogues",
       columns: ["title", "file_url", "file_name", "active", "download_count"],
     },
@@ -313,6 +337,7 @@ export async function GET() {
   for (const mod of contentModules) {
     const records = await countRows(mod.table);
     const missing = records === null ? mod.columns : await missingColumns(mod.table, mod.columns);
+    const routesOk = crudRoutesPresent(mod.api);
     const checks: Check[] = [
       { label: `${mod.table} table`, ok: records !== null, detail: `${records ?? 0} record(s).` },
       {
@@ -322,13 +347,17 @@ export async function GET() {
       },
       {
         label: "CRUD API routes",
-        ok: true,
-        detail: "Collection + item routes registered with auth and validation.",
+        ok: routesOk,
+        detail: routesOk
+          ? "Collection + item routes present, each enforcing auth and validation."
+          : `Route handler missing for one of: /api/admin/${mod.api}, /api/admin/${mod.api}/[id].`,
       },
       {
         label: "Auto-publish on change",
-        ok: true,
-        detail: "Writes republish the public site atomically.",
+        ok: PUBLISHED_TABLES.has(mod.table),
+        detail: PUBLISHED_TABLES.has(mod.table)
+          ? "Writes republish the public site atomically."
+          : "Lead-capture table — intentionally excluded from the published snapshot.",
       },
     ];
     const { status, summary } = decide(records, missing);
@@ -382,9 +411,16 @@ export async function GET() {
 
   /* ── 4. Security & configuration ──────────────────────────────────────── */
   {
-    const exposed = ["DATABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "CLOUDINARY_API_SECRET", "AUTH_SECRET", "RESEND_API_KEY"].filter(
-      (k) => k.startsWith("NEXT_PUBLIC_")
-    );
+    // A secret is only exposed when a NEXT_PUBLIC_-prefixed variant exists in
+    // the environment — Next.js inlines NEXT_PUBLIC_* into the client bundle.
+    const SECRET_ENV_KEYS = [
+      "DATABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "CLOUDINARY_API_SECRET",
+      "AUTH_SECRET",
+      "RESEND_API_KEY",
+    ];
+    const exposed = SECRET_ENV_KEYS.filter((k) => Boolean(process.env[`NEXT_PUBLIC_${k}`]));
     const checks: Check[] = [
       {
         label: "Database credentials kept server-side",

@@ -201,7 +201,7 @@ export default async function SolutionPage({ params }: { params: Promise<{ slug:
                 <p className="mt-3 leading-7 text-slate-600">{solution.fullDescription}</p>
               </details>
               <details className="rounded-xl border border-slate-200 bg-white p-5">
-                <summary className="cursor-pointer font-bold">How do I request this solution?</summary>
+                <summary className="flex min-h-11 cursor-pointer items-center font-bold">How do I request this solution?</summary>
                 <p className="mt-3 leading-7 text-slate-600">Send the project drawings, location and required scope through the inquiry form. MSNSS will review the information before confirming the work.</p>
               </details>
               {(solution.faqs ?? []).map((f, i) => (
