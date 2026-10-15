@@ -100,7 +100,7 @@ export function Testimonials({ items }: { items: Testimonial[] }) {
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <div>
             {/* <span className="text-sm font-bold uppercase tracking-wider text-brand">Testimonials</span> */}
-            <h2 className="mt-2 text-3xl font-extrabold text-ink sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-extrabold text-ink sm:text-4xl lg:whitespace-nowrap">
               What Our <span className="text-brand">Clients Say</span>
             </h2>
           </div>

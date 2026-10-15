@@ -5,6 +5,8 @@ import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { cloudinaryImageLoader } from "@/lib/cloudinary-loader";
 import { isCloudinaryUrl } from "@/lib/cloudinary-url";
+import type { ProductImageType, ProductMediaType } from "@/db/schema";
+import { parseVideoSource } from "@/lib/media";
 
 export function AdminPage({
   title,
@@ -1042,266 +1044,29 @@ export function HomePlacementFields({
 }
 
 /**
- * Uploads image files to the simple local product-upload endpoint
+ * Uploads gallery files (images or videos) to the local media-upload endpoint
  * (`/api/admin/products/upload`), which stores them under
- * `public/uploads/products/[product-slug]/` and returns public URLs.
+ * `public/uploads/<folder>/[slug]/` and returns public URLs.
  * Cloudinary is never involved — uploads keep working with no external
  * dependencies, while pre-existing Cloudinary/external URLs keep rendering.
  */
-async function uploadLocalProductImages(files: File[], slug?: string): Promise<string[]> {
+async function uploadLocalMediaFiles(
+  files: File[],
+  slug?: string,
+  folder?: string
+): Promise<string[]> {
   const form = new FormData();
   for (const file of files) form.append("files", file);
   if (slug) form.append("slug", slug);
+  if (folder) form.append("folder", folder);
   const res = await fetch("/api/admin/products/upload", { method: "POST", body: form });
   const data = await res.json().catch(() => null);
   if (!res.ok || !data?.success) {
     throw new Error(data?.error || "Upload failed. Please try again.");
   }
   const urls = (data.urls ?? (data.url ? [data.url] : [])).filter(Boolean);
-  if (!urls.length) throw new Error("Upload returned no images.");
+  if (!urls.length) throw new Error("Upload returned no files.");
   return urls;
-}
-
-/**
- * Hero gallery editor for a product — the exact images (and order) rendered
- * by the public product-page hero. Position 1 is the main hero image;
- * the rest are thumbnails, in order.
- *
- * Upload-first: [+ Add Images] accepts multiple local files, stored via the
- * local upload endpoint. Per image: preview, replace, delete, drag-and-drop
- * reorder and "set as primary". Existing Cloudinary/external URLs are shown
- * as-is and preserved — there is no manual URL field.
- */
-export function ProductHeroImageEditor({
-  value,
-  onChange,
-  max = 6,
-  slug,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-  max?: number;
-  slug?: string;
-}) {
-  const rows = value ?? [];
-  const full = rows.length >= max;
-  const [busy, setBusy] = useState(false);
-  const [replacing, setReplacing] = useState<number | null>(null);
-  const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const addRef = useRef<HTMLInputElement>(null);
-
-  const move = (idx: number, to: number) => {
-    if (to < 0 || to >= rows.length || to === idx) return;
-    onChange(moveItem(rows, idx, to));
-    setStatus(`Image moved to hero position ${to + 1} of ${rows.length}`);
-  };
-
-  const setPrimary = (idx: number) => {
-    if (idx === 0) return;
-    onChange(moveItem(rows, idx, 0));
-    setStatus("Hero position 1 updated — this image is now the main hero image");
-  };
-
-  const remove = (idx: number) => {
-    onChange(rows.filter((_, i) => i !== idx));
-    setStatus(`Hero image at position ${idx + 1} deleted`);
-  };
-
-  const addFiles = async (files: FileList | null) => {
-    const picked = Array.from(files ?? []).filter((f) => f.size > 0);
-    if (!picked.length) return;
-    const room = max - rows.length;
-    if (room <= 0) {
-      setError(`Hero gallery is full (${max}/${max}). Delete an image to add another.`);
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      const urls = await uploadLocalProductImages(picked.slice(0, room), slug);
-      onChange([...rows, ...urls].slice(0, max));
-      setStatus(
-        urls.length > 1
-          ? `${urls.length} images uploaded to the hero gallery`
-          : "Image uploaded to the hero gallery"
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const replaceFile = async (idx: number, file: File | undefined) => {
-    if (!file || file.size === 0) return;
-    setReplacing(idx);
-    setError("");
-    try {
-      const [url] = await uploadLocalProductImages([file], slug);
-      onChange(rows.map((row, i) => (i === idx ? url : row)));
-      setStatus(`Hero image at position ${idx + 1} replaced`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed. Please try again.");
-    } finally {
-      setReplacing(null);
-    }
-  };
-
-  const handleDrop = (idx: number) => {
-    if (dragIdx !== null && dragIdx !== idx) move(dragIdx, idx);
-    setDragIdx(null);
-    setDragOverIdx(null);
-  };
-
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-ink">Hero Images</span>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
-            full ? "bg-brand text-white" : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          {rows.length} / {max} images
-        </span>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => addRef.current?.click()}
-        disabled={busy || full}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand px-4 py-4 text-sm font-bold text-brand transition hover:bg-brand/5 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
-      >
-        {busy ? "Uploading…" : "+ Add Images"}
-      </button>
-      <input
-        ref={addRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
-        multiple
-        className="hidden"
-        aria-label="Add hero images"
-        onChange={(e) => {
-          void addFiles(e.target.files);
-          e.target.value = "";
-        }}
-      />
-      <p className="mt-1.5 text-xs text-slate-500">
-        Select multiple local images at once. Position 1 is the main hero image — drag cards to reorder.
-      </p>
-
-      {rows.length > 0 ? (
-        <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map((url, idx) => (
-            <li
-              key={`${url}-${idx}`}
-              draggable
-              onDragStart={() => setDragIdx(idx)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setDragOverIdx(idx);
-              }}
-              onDrop={() => handleDrop(idx)}
-              onDragEnd={() => {
-                setDragIdx(null);
-                setDragOverIdx(null);
-              }}
-              className={`relative overflow-hidden rounded-xl border-2 bg-white transition ${
-                dragIdx === idx
-                  ? "border-brand ring-2 ring-brand/20"
-                  : dragOverIdx === idx
-                    ? "border-brand bg-brand/5"
-                    : "border-slate-200"
-              }`}
-            >
-              <div className="relative aspect-[4/3] w-full bg-slate-100">
-                {url ? (
-                  <Image
-                    src={url}
-                    alt={`Hero image ${idx + 1}`}
-                    fill
-                    sizes="320px"
-                    loader={isCloudinaryUrl(url) ? cloudinaryImageLoader : undefined}
-                    className="object-cover"
-                  />
-                ) : null}
-                <span
-                  className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-[11px] font-bold tabular-nums ${
-                    idx === 0 ? "bg-brand text-white" : "bg-ink/85 text-white"
-                  }`}
-                >
-                  {idx === 0 ? "★ Primary" : `Position ${idx + 1}`}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 p-2.5">
-                {idx !== 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setPrimary(idx)}
-                    className="rounded-md bg-brand/10 px-2.5 py-1.5 text-xs font-bold text-brand transition hover:bg-brand hover:text-white"
-                  >
-                    Set as primary
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => move(idx, idx - 1)}
-                  disabled={idx === 0}
-                  aria-label={`Move image ${idx + 1} earlier`}
-                  className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:border-brand hover:text-brand disabled:opacity-30"
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(idx, idx + 1)}
-                  disabled={idx === rows.length - 1}
-                  aria-label={`Move image ${idx + 1} later`}
-                  className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:border-brand hover:text-brand disabled:opacity-30"
-                >
-                  →
-                </button>
-                <label className="cursor-pointer rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-brand ring-1 ring-slate-300 transition hover:bg-brand hover:text-white">
-                  {replacing === idx ? "Uploading…" : "Replace"}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
-                    className="sr-only"
-                    aria-label={`Replace hero image ${idx + 1}`}
-                    onChange={(e) => {
-                      void replaceFile(idx, e.target.files?.[0]);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => remove(idx)}
-                  aria-label={`Delete hero image ${idx + 1}`}
-                  className="rounded-md bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-          No hero images yet. Add up to {max} — the public hero falls back to the main image until then.
-        </p>
-      )}
-
-      <p role="status" aria-live="polite" className="mt-2 text-xs font-medium text-brand">
-        {status}
-      </p>
-      {error ? <p className="mt-1 text-xs font-medium text-red-600">{error}</p> : null}
-    </div>
-  );
 }
 
 /**
@@ -1398,5 +1163,690 @@ export function OrderedListEditor({
         + {addLabel}
       </button>
     </div>
+  );
+}
+
+/* ────────────────────────── advanced product gallery ─────────────────────── */
+
+export type ProductMediaValue = {
+  url: string;
+  mediaType: ProductMediaType;
+  type: ProductImageType;
+  altText: string;
+  posterUrl: string;
+};
+
+/** Type options offered per gallery entry in the advanced gallery editor. */
+export const PRODUCT_IMAGE_TYPE_OPTIONS: { value: ProductImageType; label: string }[] = [
+  { value: "primary", label: "Primary" },
+  { value: "gallery", label: "Gallery" },
+  { value: "CAD", label: "CAD / Drawing" },
+  { value: "onsite", label: "On-Site" },
+];
+
+const isBlobUrl = (url: string) => url.startsWith("blob:");
+
+/** Best-effort video detection — file MIME types are not always populated. */
+const isVideoFile = (file: File) =>
+  file.type.startsWith("video/") || /\.(mp4|m4v|webm|ogv|ogg|mov)$/i.test(file.name);
+
+/**
+ * Advanced gallery editor — images *and* video in one ordered list.
+ *
+ * Built for bulk data entry: a single drag-and-drop zone accepts a whole set of
+ * images and videos at once, each file showing an instant local preview the
+ * moment it is dropped while the real upload streams in the background. Videos
+ * can also be added by URL (YouTube, Vimeo or a direct MP4/WebM link) and given
+ * an optional poster/thumbnail. Every card carries its `alt text`, a position
+ * and (when `roles` are enabled) its gallery role; cards are drag-reorderable
+ * (with ← / → keyboard alternatives) and the array order is the public display
+ * order. With `roles` enabled, exactly one *image* may be `primary`.
+ *
+ * Values are plain URLs, so what is saved here is exactly what the public media
+ * gallery renders — the server stores them as ordered rows (`product_images`
+ * for products, `section_media` for the homepage section galleries).
+ */
+export function ProductMediaGalleryEditor({
+  value,
+  onChange,
+  max = 24,
+  slug,
+  folder = "products",
+  label = "Product Gallery",
+  emptyHint = "No gallery media yet. Drag in images or video, or add a video by URL — the first image becomes the primary hero image.",
+  roles = PRODUCT_IMAGE_TYPE_OPTIONS,
+}: {
+  value: ProductMediaValue[];
+  onChange: (next: ProductMediaValue[]) => void;
+  max?: number;
+  slug?: string;
+  /** Upload sub-folder under `public/uploads/` (default "products"). */
+  folder?: string;
+  /** Editor heading. */
+  label?: string;
+  /** Copy shown when the list is empty. */
+  emptyHint?: string;
+  /** Gallery roles to offer; `false` hides all role UI (plain media wall). */
+  roles?: readonly { value: ProductImageType; label: string }[] | false;
+}) {
+  const roleOptions = roles === false ? null : roles;
+  const showRoles = roleOptions !== null;
+  const rows = value ?? [];
+  const full = rows.length >= max;
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+  const [drag, setDrag] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [urlOpen, setUrlOpen] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [posterIdx, setPosterIdx] = useState<number | null>(null);
+  const [posterBusy, setPosterBusy] = useState(false);
+  const addRef = useRef<HTMLInputElement>(null);
+  const posterRef = useRef<HTMLInputElement>(null);
+
+  /** Keep at most one `primary` *image*; any extra (or a video) is demoted. */
+  const normalizePrimary = (list: ProductMediaValue[]): ProductMediaValue[] => {
+    let seen = false;
+    return list.map((row) => {
+      if (row.type !== "primary") return row;
+      if (row.mediaType !== "video" && !seen) {
+        seen = true;
+        return row;
+      }
+      return { ...row, type: "gallery" as ProductImageType };
+    });
+  };
+
+  const update = (idx: number, patch: Partial<ProductMediaValue>) =>
+    onChange(rows.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+
+  const setPrimary = (idx: number) => {
+    const target = rows[idx];
+    if (!target || target.mediaType === "video") return;
+    const rest = rows
+      .filter((_, i) => i !== idx)
+      .map((row) => (row.type === "primary" ? { ...row, type: "gallery" as ProductImageType } : row));
+    onChange([{ ...target, type: "primary" }, ...rest]);
+    setStatus("Primary image set — this is now the lead hero image");
+  };
+
+  const move = (idx: number, to: number) => {
+    if (to < 0 || to >= rows.length || to === idx) return;
+    onChange(moveItem(rows, idx, to));
+    setStatus(`Item moved to position ${to + 1} of ${rows.length}`);
+  };
+
+  const remove = (idx: number) => {
+    onChange(rows.filter((_, i) => i !== idx));
+    setStatus(`Item at position ${idx + 1} removed`);
+  };
+
+  const addFiles = async (files: FileList | File[] | null) => {
+    const picked = Array.from(files ?? []).filter((file) => file.size > 0);
+    if (!picked.length) return;
+    const room = max - rows.length;
+    if (room <= 0) {
+      setError(`Gallery is full (${max}/${max}). Remove an item to add more.`);
+      return;
+    }
+    const chosen = picked.slice(0, room);
+    setUploading(true);
+    setError("");
+
+    // Instant thumbnails: append object-URL placeholders before the network
+    // round-trip finishes, then swap each one for its uploaded URL.
+    const blobs = chosen.map((file) => URL.createObjectURL(file));
+    let primaryTaken =
+      !showRoles || rows.some((row) => row.type === "primary" && row.mediaType !== "video");
+    const placeholders: ProductMediaValue[] = chosen.map((file, i) => {
+      const video = isVideoFile(file);
+      let type: ProductImageType = "gallery";
+      if (!video && !primaryTaken) {
+        type = "primary";
+        primaryTaken = true;
+      }
+      return {
+        url: blobs[i],
+        mediaType: video ? "video" : "image",
+        type,
+        altText: "",
+        posterUrl: "",
+      };
+    });
+    const staged = [...rows, ...placeholders];
+    onChange(staged);
+
+    try {
+      const urls = await uploadLocalMediaFiles(chosen, slug, folder);
+      onChange(
+        staged.map((row) => {
+          const i = blobs.indexOf(row.url);
+          if (i === -1) return row;
+          return { ...row, url: urls[i] ?? row.url };
+        })
+      );
+      setStatus(
+        urls.length > 1
+          ? `${urls.length} items added to the gallery`
+          : "Item added to the gallery"
+      );
+    } catch (e) {
+      onChange(staged.filter((row) => !blobs.includes(row.url)));
+      setError(e instanceof Error ? e.message : "Upload failed. Please try again.");
+    } finally {
+      blobs.forEach((url) => URL.revokeObjectURL(url));
+      setUploading(false);
+    }
+  };
+
+  const addVideoUrl = () => {
+    const url = videoUrl.trim();
+    if (!url) return;
+    if (rows.length >= max) {
+      setError(`Gallery is full (${max}/${max}). Remove an item to add more.`);
+      return;
+    }
+    onChange([...rows, { url, mediaType: "video", type: "gallery", altText: "", posterUrl: "" }]);
+    setVideoUrl("");
+    setUrlOpen(false);
+    setError("");
+    setStatus("Video added to the gallery");
+  };
+
+  const pickPoster = (idx: number) => {
+    setPosterIdx(idx);
+    // Allow re-picking the same file by clearing the input first.
+    if (posterRef.current) posterRef.current.value = "";
+    posterRef.current?.click();
+  };
+
+  const addPoster = async (file: File | undefined) => {
+    if (!file || posterIdx === null) return;
+    const idx = posterIdx;
+    setPosterBusy(true);
+    setError("");
+    try {
+      const [url] = await uploadLocalMediaFiles([file], slug, folder);
+      onChange(rows.map((row, i) => (i === idx ? { ...row, posterUrl: url } : row)));
+      setStatus("Video poster updated");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Poster upload failed. Please try again.");
+    } finally {
+      setPosterBusy(false);
+      setPosterIdx(null);
+    }
+  };
+
+  const handleDropFiles = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDrag(false);
+    void addFiles(e.dataTransfer.files);
+  };
+
+  const handleCardDrop = (idx: number) => {
+    if (dragIdx !== null && dragIdx !== idx) move(dragIdx, idx);
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const videoCount = rows.filter((row) => row.mediaType === "video").length;
+  const imageCount = rows.length - videoCount;
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-sm font-semibold text-ink">{label}</span>
+        <span className="flex items-center gap-1.5">
+          {videoCount > 0 ? (
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-slate-600">
+              {imageCount} image{imageCount === 1 ? "" : "s"} · {videoCount} video
+              {videoCount === 1 ? "" : "s"}
+            </span>
+          ) : null}
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
+              full ? "bg-brand text-white" : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            {rows.length} / {max}
+          </span>
+        </span>
+      </div>
+
+      {/* ── bulk drag-and-drop zone (images + video) ─────────────────────── */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => addRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            addRef.current?.click();
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDrag(true);
+        }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={handleDropFiles}
+        className={`flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition ${
+          drag ? "border-brand bg-brand/5" : "border-slate-300 bg-slate-50 hover:border-brand/60"
+        }`}
+      >
+        <svg
+          width="30"
+          height="30"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          className="text-slate-400"
+          aria-hidden="true"
+        >
+          <path d="M12 16V4m0 0 4 4m-4-4L8 8" />
+          <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+        </svg>
+        <p className="mt-2 text-sm font-semibold text-ink">
+          {uploading ? "Uploading…" : "Drag & drop images or video here"}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          or click to browse — select 10 or more at once. Images JPG, PNG, WebP, AVIF, GIF, SVG
+          (max 10MB) · Video MP4, WebM, MOV (max 60MB).
+        </p>
+      </div>
+      <input
+        ref={addRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml,video/mp4,video/webm,video/ogg,video/quicktime"
+        multiple
+        className="hidden"
+        aria-label="Add gallery images or videos"
+        onChange={(e) => {
+          void addFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+
+      {/* ── add a video by URL (YouTube / Vimeo / direct file) ───────────── */}
+      <div className="mt-2">
+        {urlOpen ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              autoFocus
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addVideoUrl();
+                }
+                if (e.key === "Escape") {
+                  setUrlOpen(false);
+                  setVideoUrl("");
+                }
+              }}
+              placeholder="https://youtube.com/watch?v=… or a direct .mp4 link"
+              aria-label="Video URL"
+              className={`${inputCls} min-w-[240px] flex-1`}
+            />
+            <button
+              type="button"
+              onClick={addVideoUrl}
+              className="rounded-md bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-dark"
+            >
+              Add video
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUrlOpen(false);
+                setVideoUrl("");
+              }}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand hover:text-brand"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setUrlOpen(true)}
+            className="rounded-md border border-dashed border-brand px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/5"
+          >
+            + Add video by URL
+          </button>
+        )}
+      </div>
+
+      {/* ── per-item cards, in public display order ──────────────────────── */}
+      {rows.length > 0 ? (
+        <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((row, idx) => {
+            const blob = isBlobUrl(row.url);
+            const isVideo = row.mediaType === "video";
+            const source = isVideo ? parseVideoSource(row.url) : null;
+            const poster = row.posterUrl || source?.derivedPoster || "";
+
+            return (
+              <li
+                key={`${row.url}-${idx}`}
+                draggable
+                onDragStart={() => setDragIdx(idx)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOverIdx(idx);
+                }}
+                onDrop={() => handleCardDrop(idx)}
+                onDragEnd={() => {
+                  setDragIdx(null);
+                  setDragOverIdx(null);
+                }}
+                className={`overflow-hidden rounded-xl border-2 bg-white transition ${
+                  dragIdx === idx
+                    ? "border-brand ring-2 ring-brand/20"
+                    : dragOverIdx === idx
+                      ? "border-brand bg-brand/5"
+                      : "border-slate-200"
+                }`}
+              >
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+                  {isVideo ? (
+                    poster ? (
+                      <Image
+                        src={poster}
+                        alt={row.altText || `Video ${idx + 1}`}
+                        fill
+                        sizes="320px"
+                        loader={isCloudinaryUrl(poster) ? cloudinaryImageLoader : undefined}
+                        className="object-cover"
+                      />
+                    ) : blob || source?.kind === "file" ? (
+                      // A blob (just-dropped) or an uploaded file can be previewed
+                      // directly; `#t=0.1` nudges browsers to paint a first frame.
+                      <video
+                        src={blob ? row.url : `${source?.fileUrl ?? row.url}#t=0.1`}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs font-semibold text-slate-400">
+                        Embedded video
+                      </span>
+                    )
+                  ) : blob ? (
+                    // Instant local preview of a just-picked file, before the upload
+                    // resolves. A raw <img> handles the `blob:` URL; next/image cannot.
+                    <img src={row.url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  ) : (
+                    <Image
+                      src={row.url}
+                      alt={row.altText || `Gallery image ${idx + 1}`}
+                      fill
+                      sizes="320px"
+                      loader={isCloudinaryUrl(row.url) ? cloudinaryImageLoader : undefined}
+                      className="object-cover"
+                    />
+                  )}
+
+                  {isVideo && !blob ? (
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-ink/70 text-white shadow-lg ring-1 ring-white/40">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </span>
+                    </span>
+                  ) : null}
+
+                  {blob ? (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs font-bold text-white">
+                      Uploading…
+                    </span>
+                  ) : null}
+
+                  <span
+                    className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                      row.type === "primary" ? "bg-brand text-white" : "bg-ink/85 text-white"
+                    }`}
+                  >
+                    {row.type === "primary"
+                      ? "★ Primary"
+                      : `${isVideo ? "Video" : "Image"} · Position ${idx + 1}`}
+                  </span>
+                  <span
+                    className="absolute right-2 top-2 flex h-6 w-6 cursor-grab items-center justify-center rounded-md bg-ink/70 text-white active:cursor-grabbing"
+                    title="Drag to reorder"
+                    aria-hidden="true"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="9" cy="6" r="1.5" />
+                      <circle cx="15" cy="6" r="1.5" />
+                      <circle cx="9" cy="12" r="1.5" />
+                      <circle cx="15" cy="12" r="1.5" />
+                      <circle cx="9" cy="18" r="1.5" />
+                      <circle cx="15" cy="18" r="1.5" />
+                    </svg>
+                  </span>
+                </div>
+
+                <div className="space-y-2 p-2.5">
+                  {isVideo ? (
+                    <>
+                      <input
+                        value={row.url}
+                        onChange={(e) => update(idx, { url: e.target.value })}
+                        placeholder="Video URL"
+                        aria-label={`Video URL for item ${idx + 1}`}
+                        className={inputCls}
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="relative h-10 w-16 shrink-0 overflow-hidden rounded border border-slate-200 bg-slate-100">
+                          {poster ? (
+                            <Image
+                              src={poster}
+                              alt=""
+                              fill
+                              sizes="64px"
+                              loader={isCloudinaryUrl(poster) ? cloudinaryImageLoader : undefined}
+                              className="object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-400">
+                              No poster
+                            </span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => pickPoster(idx)}
+                          disabled={posterBusy}
+                          className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand hover:text-brand disabled:opacity-40"
+                        >
+                          {posterBusy && posterIdx === idx ? "Uploading…" : poster ? "Replace poster" : "Add poster"}
+                        </button>
+                        {row.posterUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => update(idx, { posterUrl: "" })}
+                            className="rounded-md px-2 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-red-600"
+                          >
+                            Remove
+                          </button>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : null}
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {showRoles ? (
+                      <>
+                        <label className="sr-only" htmlFor={`pimg-type-${idx}`}>
+                          Gallery role
+                        </label>
+                        <select
+                          id={`pimg-type-${idx}`}
+                          value={row.type}
+                          onChange={(e) => {
+                            const type = e.target.value as ProductImageType;
+                            onChange(
+                              normalizePrimary(rows.map((r, i) => (i === idx ? { ...r, type } : r)))
+                            );
+                          }}
+                          className={`${inputCls} w-36`}
+                        >
+                          {roleOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        {!isVideo && row.type !== "primary" && !blob ? (
+                          <button
+                            type="button"
+                            onClick={() => setPrimary(idx)}
+                            className="rounded-md bg-brand/10 px-2.5 py-1.5 text-xs font-bold text-brand transition hover:bg-brand hover:text-white"
+                          >
+                            Set primary
+                          </button>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+                  <input
+                    value={row.altText}
+                    onChange={(e) => update(idx, { altText: e.target.value })}
+                    placeholder={isVideo ? "Caption / title (optional)" : "Alt text (describe the image)"}
+                    aria-label={`${isVideo ? "Caption" : "Alt text"} for item ${idx + 1}`}
+                    className={inputCls}
+                  />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => move(idx, idx - 1)}
+                      disabled={idx === 0}
+                      aria-label={`Move item ${idx + 1} earlier`}
+                      className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:border-brand hover:text-brand disabled:opacity-30"
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(idx, idx + 1)}
+                      disabled={idx === rows.length - 1}
+                      aria-label={`Move item ${idx + 1} later`}
+                      className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:border-brand hover:text-brand disabled:opacity-30"
+                    >
+                      →
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remove(idx)}
+                      aria-label={`Delete item ${idx + 1}`}
+                      className="ml-auto rounded-md bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+          {emptyHint}
+        </p>
+      )}
+
+      <input
+        ref={posterRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/tiff,image/x-icon,image/svg+xml"
+        className="hidden"
+        aria-label="Upload video poster"
+        onChange={(e) => {
+          void addPoster(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+
+      <p role="status" aria-live="polite" className="mt-2 text-xs font-medium text-brand">
+        {status}
+      </p>
+      {error ? <p className="mt-1 text-xs font-medium text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+/* ───────────────────── homepage section media galleries ──────────────────── */
+
+/** One item of an admin-managed section gallery (`section_media` row). */
+export type SectionMediaValue = {
+  url: string;
+  mediaType: ProductMediaType;
+  altText: string;
+  posterUrl: string;
+};
+
+/**
+ * Gallery editor for the homepage marketing sections (About / Why Choose).
+ *
+ * Provides the same bulk drag-and-drop, video-by-URL and poster workflow as the
+ * product gallery, minus the product-only role UI — these galleries are a plain
+ * media wall. The editor emits the full ordered list; the caller saves it as one
+ * atomic request (`PUT /api/admin/section-media/bulk`).
+ */
+export function SectionMediaGalleryEditor({
+  value,
+  onChange,
+  label,
+  slug,
+  max = 24,
+  emptyHint,
+}: {
+  value: SectionMediaValue[];
+  onChange: (next: SectionMediaValue[]) => void;
+  /** Editor heading, e.g. "About Section Gallery". */
+  label: string;
+  /** Upload folder under `public/uploads/sections/` (usually the section key). */
+  slug?: string;
+  max?: number;
+  emptyHint?: string;
+}) {
+  const mapped: ProductMediaValue[] = (value ?? []).map((row) => ({
+    url: row.url,
+    mediaType: row.mediaType,
+    type: "gallery",
+    altText: row.altText,
+    posterUrl: row.posterUrl,
+  }));
+
+  return (
+    <ProductMediaGalleryEditor
+      value={mapped}
+      onChange={(rows) =>
+        onChange(
+          rows.map((row) => ({
+            url: row.url,
+            mediaType: row.mediaType,
+            altText: row.altText,
+            posterUrl: row.posterUrl,
+          }))
+        )
+      }
+      max={max}
+      slug={slug}
+      folder="sections"
+      label={label}
+      emptyHint={emptyHint}
+      roles={false}
+    />
   );
 }

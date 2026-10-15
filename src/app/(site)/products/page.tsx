@@ -52,14 +52,9 @@ export default async function ProductsPage({
               <span>Manufactured for Project Requirements</span>
               <span className="h-0.5 w-5 rounded-full bg-brand" />
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+            <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl lg:whitespace-nowrap">
               MS &amp; SS Ducting, Components and Accessories
             </h2>
-            <p className="mt-4 leading-7 text-slate-600">
-              Browse active products managed by the MSNSS team. Product materials,
-              dimensions and finishes are confirmed against approved project
-              requirements.
-            </p>
           </MotionReveal>
 
           {/* Category filter */}

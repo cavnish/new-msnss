@@ -10,11 +10,16 @@ export const sectionMediaInput = z.object({
   sectionKey: z.string().trim().min(2).max(60),
   title: z.string().trim().max(255).optional().default(""),
   imageUrl: z.string().trim().min(1),
+  mediaType: z.enum(["image", "video"]).default("image"),
   altText: z.string().trim().max(500).optional().default(""),
   caption: z.string().trim().max(2000).optional().default(""),
+  posterUrl: z.string().trim().max(900).optional().default(""),
   sortOrder: z.coerce.number().int().default(0),
   active: z.boolean().default(true),
 });
+
+/** `""` means "no poster" — stored as NULL so image rows stay clean. */
+export const normalizePoster = (poster?: string) => (poster || "").trim() || null;
 
 /** List every managed section image, optionally scoped to one section. */
 export async function GET(req: Request) {
@@ -42,7 +47,11 @@ export async function POST(req: Request) {
       );
     const [row] = await db
       .insert(sectionMedia)
-      .values({ ...parsed.data, updatedAt: new Date() })
+      .values({
+        ...parsed.data,
+        posterUrl: normalizePoster(parsed.data.posterUrl),
+        updatedAt: new Date(),
+      })
       .returning();
     return Response.json(row, { status: 201 });
   } catch (e) {

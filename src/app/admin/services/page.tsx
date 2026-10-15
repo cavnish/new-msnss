@@ -54,8 +54,17 @@ export default function ServicesAdmin() {
 
   async function load() {
     setLoading(true);
-    setItems(await (await fetch("/api/admin/services")).json());
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/services");
+      if (!res.ok) throw new Error("Unable to load solutions");
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setNotice((e as Error).message);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => { Promise.resolve().then(load); }, []);
 

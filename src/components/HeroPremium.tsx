@@ -11,8 +11,13 @@ const AUTOPLAY = 6000;
  * Every slide renders inside the exact same fixed box, so switching slides
  * never changes the section height (zero CLS). Typography and icon scale are
  * identical across slides and scale only with the breakpoint.
+ *
+ * The box is exactly one screen tall: it fills the viewport minus the sticky
+ * header height (published by the Navbar as `--nav-h`), so the hero — and each
+ * of its slides — fits perfectly with no vertical overflow on any device.
  */
-const HERO_HEIGHT = "h-[680px] sm:h-[680px] lg:h-[740px] xl:h-[760px]";
+const HERO_HEIGHT =
+  "h-[calc(100svh_-_var(--nav-h,70px))] min-h-[600px]";
 
 const TRUST = [
   { big: "25+", top: "YEARS OF", bottom: "EXPERIENCE", icon: "shield" },
@@ -116,7 +121,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
       <div className="pointer-events-none absolute -left-40 top-1/4 h-[480px] w-[480px] rounded-full bg-brand/15 blur-[130px]" />
 
       {/* Content — fixed box, vertically centred, identical per slide */}
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl flex-col justify-center px-4 py-10 pb-16 sm:px-6 sm:py-12 sm:pb-20 lg:py-16 lg:pb-24">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl flex-col justify-center px-4 py-8 pb-14 sm:px-6 sm:py-10 sm:pb-16 lg:py-12 lg:pb-20">
         <div className="max-w-3xl">
           <AnimatePresence mode="wait">
             <motion.div
@@ -169,7 +174,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
           </AnimatePresence>
 
           {/* Trust points — uniform cards and one shared scale per breakpoint */}
-          <div className="mt-7 grid max-w-2xl grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:mt-9 sm:grid-cols-4 sm:gap-5 sm:pt-7 lg:mt-10">
+          <div className="mt-6 grid max-w-2xl grid-cols-2 gap-4 border-t border-white/15 pt-4 sm:mt-7 sm:grid-cols-4 sm:gap-5 sm:pt-6 lg:mt-8">
             {TRUST.map((t) => (
               <div key={t.bottom} className="flex items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand/40 bg-brand/10 text-cyan-300 sm:h-10 sm:w-10">

@@ -23,7 +23,7 @@ export function ProcessSection({
   return (
     <section className="bg-white py-10 sm:py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-center text-xl font-extrabold tracking-tight text-ink sm:text-2xl">
+        <h2 className="text-center text-xl font-extrabold tracking-tight text-ink sm:text-2xl lg:whitespace-nowrap">
           {title}
         </h2>
 

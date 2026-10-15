@@ -52,6 +52,7 @@ export interface SiteSnapshot {
   adminUsers: SnapshotRow[];
   heroSlides: SnapshotRow[];
   products: SnapshotRow[];
+  productImages: SnapshotRow[];
   projects: SnapshotRow[];
   projectImages: SnapshotRow[];
   clients: SnapshotRow[];
@@ -87,8 +88,20 @@ export interface PublishResult {
 
 const globalStore = globalThis as typeof globalThis & {
   __msnssSnapshot?: SiteSnapshot | null;
+  __msnssPointerProbe?: { version: number | null; checkedAt: number };
   __msnssPublishChain?: Promise<unknown>;
 };
+
+/**
+ * How long the `current.json` pointer may be trusted without re-reading it.
+ *
+ * The snapshot itself is memoised for speed, but a process that did not
+ * perform the publish (a second `next start` worker, a restarted container,
+ * ...) must still pick the new version up. Probing this tiny file at most
+ * once a second keeps that delay imperceptible while costing a single small
+ * read per burst of renders.
+ */
+const POINTER_TTL_MS = 1_000;
 
 function memo(snapshot: SiteSnapshot | null): SiteSnapshot | null {
   globalStore.__msnssSnapshot = snapshot;
@@ -98,6 +111,7 @@ function memo(snapshot: SiteSnapshot | null): SiteSnapshot | null {
 /** Drop the in-memory snapshot so the next read picks up a fresh version. */
 export function invalidateSnapshotCache(): void {
   globalStore.__msnssSnapshot = undefined;
+  globalStore.__msnssPointerProbe = undefined;
 }
 
 /* ─────────────────────────────── checksums ───────────────────────────────── */
@@ -155,23 +169,49 @@ export function validateSnapshot(body: Omit<SiteSnapshot, "meta">): {
  * Bust the Next.js render cache so a fresh publish is reflected immediately
  * rather than after the ISR window. Public routes are cached aggressively, so
  * this is what guarantees "never show stale content after a successful publish".
+ *
+ * List pages are named directly and every dynamic detail route is named with
+ * its `[slug]` pattern (Next resolves those to all generated paths). The root
+ * layout revalidation is the catch-all: it invalidates the whole public tree,
+ * including routes added later.
  */
 const PUBLIC_ROUTES = [
   "/",
   "/about",
   "/catalogue",
-  "/products",
-  "/solutions",
-  "/projects",
-  "/plant-and-machinery",
   "/contact",
-];
+  "/privacy-policy",
+  "/terms-and-conditions",
+  "/products",
+  "/products/[slug]",
+  "/solutions",
+  "/solutions/[slug]",
+  "/projects",
+  "/projects/[slug]",
+  "/clients/[slug]",
+  "/plant-and-machinery",
+  "/plant-and-machinery/[slug]",
+] as const;
 
 export async function revalidatePublicSite(): Promise<void> {
   try {
     const { revalidatePath } = await import("next/cache");
-    for (const route of PUBLIC_ROUTES) revalidatePath(route);
-    revalidatePath("/", "layout");
+    // Each call is isolated: a pattern that a given Next version rejects must
+    // never prevent the remaining routes (or the layout catch-all) from being
+    // invalidated.
+    for (const route of PUBLIC_ROUTES) {
+      try {
+        revalidatePath(route);
+      } catch {
+        /* route never rendered / outside a request scope — best effort */
+      }
+    }
+    try {
+      // Catch-all: invalidates the whole public tree in one call.
+      revalidatePath("/", "layout");
+    } catch {
+      /* best effort */
+    }
   } catch {
     // Outside a request scope (e.g. `next build`, seed script) there is no
     // static generation store to invalidate — harmless.
@@ -225,6 +265,7 @@ export async function buildSnapshotFromDatabase(): Promise<Omit<SiteSnapshot, "m
     adminUsers,
     heroSlides,
     products,
+    productImages,
     projects,
     projectImages,
     clients,
@@ -238,6 +279,16 @@ export async function buildSnapshotFromDatabase(): Promise<Omit<SiteSnapshot, "m
     db.select().from(schema.adminUsers),
     db.select().from(schema.heroSlides),
     db.select().from(schema.products),
+    // Tolerate a database where the `product_images` migration has not been
+    // applied yet: publish from every other table rather than failing the whole
+    // snapshot. The public page falls back to the legacy gallery meanwhile.
+    db
+      .select()
+      .from(schema.productImages)
+      .catch((error) => {
+        console.warn("[content] product_images unavailable; publishing without gallery", error);
+        return [] as SnapshotRow[];
+      }),
     db.select().from(schema.projects),
     db.select().from(schema.projectImages),
     db.select().from(schema.clients),
@@ -253,6 +304,7 @@ export async function buildSnapshotFromDatabase(): Promise<Omit<SiteSnapshot, "m
     adminUsers,
     heroSlides,
     products,
+    productImages,
     projects,
     projectImages,
     clients,
@@ -466,22 +518,48 @@ async function loadVersion(version: number): Promise<SiteSnapshot | null> {
 }
 
 /**
+ * Version currently pointed at by `current.json`, probed at most once per
+ * {@link POINTER_TTL_MS}. Never throws.
+ */
+async function readPointerVersion(): Promise<number | null> {
+  const now = Date.now();
+  const probe = globalStore.__msnssPointerProbe;
+  if (probe && now - probe.checkedAt < POINTER_TTL_MS) return probe.version;
+
+  const pointer = await readJson<{ version: number }>(CURRENT_POINTER);
+  const version = typeof pointer?.version === "number" ? pointer.version : null;
+  globalStore.__msnssPointerProbe = { version, checkedAt: now };
+  return version;
+}
+
+/**
  * Serve the published content. Order:
- *   1. in-memory cache (no I/O at all)
- *   2. `current.json` pointer → its version
+ *   1. pointer probe + in-memory cache — hit whenever the memoised snapshot
+ *      is still the active version (no snapshot I/O at all)
+ *   2. `current.json` pointer → its version, loaded from disk
  *   3. highest readable version on disk  (survives a corrupted pointer)
  *   4. `null` — caller may fall back to the database
  *
- * Never throws and never queries the database.
+ * The pointer is re-checked (cheaply) on every read so a process that did not
+ * perform the publish — a second worker, a restarted server — switches to the
+ * new version on its own. Never throws and never queries the database.
  */
 export async function readPublishedSnapshot(): Promise<SiteSnapshot | null> {
+  const version = await readPointerVersion();
   const cached = globalStore.__msnssSnapshot;
-  if (cached) return cached;
 
-  const pointer = await readJson<{ version: number }>(CURRENT_POINTER);
-  if (pointer?.version) {
-    const snapshot = await loadVersion(pointer.version);
+  if (cached && (version === null || version === cached.meta.version)) {
+    return cached;
+  }
+
+  if (version !== null) {
+    const snapshot = await loadVersion(version);
     if (snapshot) return memo(snapshot);
+    // Pointer names a version we cannot read (pruned mid-publish): keep
+    // serving the last good snapshot rather than falling through to disk.
+    if (cached) return cached;
+  } else if (cached) {
+    return cached;
   }
 
   // Pointer missing/corrupt — fall back to the newest readable version.
@@ -490,8 +568,8 @@ export async function readPublishedSnapshot(): Promise<SiteSnapshot | null> {
       .map((e) => Number(e))
       .filter((n) => Number.isFinite(n))
       .sort((a, b) => b - a);
-    for (const version of entries) {
-      const snapshot = await loadVersion(version);
+    for (const ver of entries) {
+      const snapshot = await loadVersion(ver);
       if (snapshot) return memo(snapshot);
     }
   } catch {
@@ -524,6 +602,7 @@ export function emptySnapshotBody(): Omit<SiteSnapshot, "meta"> {
     adminUsers: [],
     heroSlides: [],
     products: [],
+    productImages: [],
     projects: [],
     projectImages: [],
     clients: [],

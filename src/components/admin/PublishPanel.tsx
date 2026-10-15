@@ -40,7 +40,22 @@ export function PublishPanel({
     setResult(null);
     try {
       const res = await fetch("/api/admin/publish", { method: "POST" });
-      const data = (await res.json()) as PublishResult;
+      const data = (await res.json().catch(() => null)) as PublishResult | null;
+      if (!res.ok || !data || typeof data.ok !== "boolean") {
+        const message =
+          (data && typeof data.error === "string" && data.error) ||
+          `Publish request failed (${res.status}).`;
+        setResult({
+          ok: false,
+          version: null,
+          publishedAt: null,
+          checksum: null,
+          durationMs: 0,
+          validation: { ok: false, warnings: [] },
+          error: message,
+        });
+        return;
+      }
       setResult(data);
       if (data.ok) router.refresh();
     } catch (error) {
@@ -87,7 +102,9 @@ export function PublishPanel({
         <div className="rounded-lg border bg-slate-50 p-4">
           <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Published</dt>
           <dd className="mt-1 text-sm font-semibold text-ink">
-            {publishedAt ? new Date(publishedAt).toLocaleString() : "—"}
+            {publishedAt
+              ? new Date(publishedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+              : "—"}
           </dd>
         </div>
         <div className="rounded-lg border bg-slate-50 p-4">

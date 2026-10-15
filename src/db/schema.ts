@@ -1,5 +1,31 @@
 import { pgTable, serial, text, varchar, timestamp, integer, boolean, jsonb, index } from "drizzle-orm/pg-core";
 
+/**
+ * Advanced product gallery.
+ *
+ * Every product image is a row here rather than an entry in a JSON array, so the
+ * catalogue can hold 10+ images per product, tag each one by role and re-order
+ * the public display sequence without rewriting the product row.
+ *
+ * `type` groups the images on the frontend:
+ *   - "primary"  the lead hero image (one per product is the convention)
+ *   - "gallery"  standard product/fabrication photography
+ *   - "CAD"      drawings, schematics and shop-detail files
+ *   - "onsite"   installation / commissioning photos
+ */
+export type ProductImageType = "primary" | "gallery" | "CAD" | "onsite";
+
+export const PRODUCT_IMAGE_TYPES: ProductImageType[] = ["primary", "gallery", "CAD", "onsite"];
+
+/**
+ * Whether a gallery entry is a still image or a video. Videos may be uploaded
+ * files (MP4/WebM) or external embeds (YouTube/Vimeo); `poster_url` holds an
+ * optional thumbnail that is shown before playback.
+ */
+export type ProductMediaType = "image" | "video";
+
+export const PRODUCT_MEDIA_TYPES: ProductMediaType[] = ["image", "video"];
+
 export type SpecRow = { label: string; value: string };
 /** One application block: a heading plus its explanatory paragraph. */
 export type AppDetail = { title: string; description: string };
@@ -72,6 +98,34 @@ export const products = pgTable(
     supplyAcrossIndia: text("supply_across_india").default("").notNull(),
   },
   (table) => [index("products_category_idx").on(table.category), index("products_featured_idx").on(table.featured, table.active)]
+);
+
+/**
+ * One product image. Mirrors `project_images`: a single table that carries the
+ * URL, its role (`type`), accessible `alt_text` and the display `sort_order`.
+ * Deleting a product cascades to its images.
+ */
+export const productImages = pgTable(
+  "product_images",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    /** "image" (default) or "video". */
+    mediaType: varchar("media_type", { length: 10 })
+      .$type<ProductMediaType>()
+      .default("image")
+      .notNull(),
+    type: varchar("type", { length: 20 }).$type<ProductImageType>().default("gallery").notNull(),
+    altText: text("alt_text").default("").notNull(),
+    /** Optional thumbnail for a video (never used for images). */
+    posterUrl: text("poster_url"),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("product_images_product_idx").on(table.productId, table.sortOrder)]
 );
 
 export const clients = pgTable("clients", {
@@ -218,11 +272,16 @@ export const mediaAssets = pgTable(
 );
 
 /**
- * Admin-managed imagery for the fixed marketing sections that have no other
- * CMS surface: the "Why Industry Leaders Choose MSNSS" tiles/map and the
- * "Ducting Solutions Across Critical Applications" grid.
+ * Admin-managed media for the fixed marketing sections that have no other CMS
+ * surface: the "Why Industry Leaders Choose MSNSS" tiles/map, the
+ * "Ducting Solutions Across Critical Applications" grid, and the homepage
+ * media galleries ("home-about-gallery", "why-choose-gallery").
  *
- * `sectionKey` values: "why-choose", "applications".
+ * A row is an image or a video (see `mediaType`); `imageUrl` always holds the
+ * media URL — for a video that is the playable file or the YouTube/Vimeo link.
+ *
+ * `sectionKey` values: "why-choose", "why-choose-map", "applications",
+ * "home-about-gallery", "why-choose-gallery".
  */
 export const sectionMedia = pgTable(
   "section_media",
@@ -231,8 +290,15 @@ export const sectionMedia = pgTable(
     sectionKey: varchar("section_key", { length: 60 }).notNull(),
     title: varchar("title", { length: 255 }).default("").notNull(),
     imageUrl: text("image_url").notNull(),
+    /** "image" (default) or "video" — shared discriminator with `product_images`. */
+    mediaType: varchar("media_type", { length: 10 })
+      .$type<ProductMediaType>()
+      .default("image")
+      .notNull(),
     altText: text("alt_text").default("").notNull(),
     caption: text("caption").default("").notNull(),
+    /** Optional thumbnail for a video (never used for images). */
+    posterUrl: text("poster_url"),
     sortOrder: integer("sort_order").default(0).notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -245,6 +311,7 @@ export type MediaAsset = typeof mediaAssets.$inferSelect;
 export type SectionMedia = typeof sectionMedia.$inferSelect;
 
 export type Product = typeof products.$inferSelect;
+export type ProductImage = typeof productImages.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectImage = typeof projectImages.$inferSelect;
 export type Client = typeof clients.$inferSelect;

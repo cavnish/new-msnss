@@ -10,6 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:sql": "node scripts/migrate-sql.mjs",
     "seed": "tsx src/db/seed.ts",
     "images:generate": "node scripts/generate-images.mjs",
     "check:secrets": "node scripts/check-secret-leak.mjs",

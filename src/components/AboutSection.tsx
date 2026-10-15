@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import SmartImage from "@/components/SmartImage";
+import { MediaMosaicGallery, type MediaGalleryItem } from "@/components/media/MediaMosaicGallery";
 
 const FEATURES = [
   ["Precision Fabrication", "MS & SS ducting made to approved drawings."],
@@ -15,6 +16,8 @@ export function AboutSection({
   overlayImage = "/images/hero-3.jpg",
   mainAlt = "Inside the MSNSS HVAC duct manufacturing facility",
   overlayAlt = "MSNSS HVAC duct installation on site",
+  description = "",
+  gallery = [],
 }: {
   /** CMS-managed (`home-about-main`); built-in default until the admin uploads. */
   mainImage?: string;
@@ -22,6 +25,10 @@ export function AboutSection({
   overlayImage?: string;
   mainAlt?: string;
   overlayAlt?: string;
+  /** Admin-authored intro paragraph (`home.about.description` setting). */
+  description?: string;
+  /** Admin-managed images + video (`home-about-gallery`); hidden when empty. */
+  gallery?: MediaGalleryItem[];
 }) {
   const reduce = useReducedMotion();
   const ease = [0.22, 1, 0.36, 1] as const;
@@ -31,7 +38,13 @@ export function AboutSection({
       <div className="pointer-events-none absolute inset-0 eng-grid opacity-[0.35]" />
       <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-brand-light/50 blur-3xl" />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-6 lg:grid-cols-[48%_52%] lg:gap-14">
+      <div className="relative mx-auto max-w-6xl px-5 sm:px-6">
+        {/* Heading — full width so it holds a single desktop line */}
+        <h2 className="text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-3xl lg:whitespace-nowrap lg:text-[34px]">
+          Built for Performance. Engineered for Precision.
+        </h2>
+
+        <div className="mt-8 grid items-center gap-10 lg:grid-cols-[48%_52%] lg:gap-14">
         {/* LEFT — image composition */}
         <div className="relative">
           {/* corner brackets */}
@@ -80,22 +93,9 @@ export function AboutSection({
           transition={{ duration: 0.6, ease }}
           className="lg:pl-2"
         >
-          {/* <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
-            <span className="h-px w-6 bg-brand/50" /> 01 / About MSNSS
-          </span> */}
-
-          <h2 className="mt-3 text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-3xl lg:text-[34px]">
-            Built for Performance.<br className="hidden sm:block" /> Engineered for Precision.
-          </h2>
-
-          <p className="mt-4 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
-            MSNSS – M S HVAC Engineers delivers complete MS &amp; SS HVAC ducting — from engineering and
-            precision manufacturing to finishing, dispatch and site installation, all from our Vasai plant.
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
-            Our approach combines technical expertise, controlled fabrication and reliable execution to
-            deliver ducting built for performance and long-term reliability.
-          </p>
+          {description ? (
+            <p className="text-[15px] leading-relaxed text-slate-600 sm:text-base">{description}</p>
+          ) : null}
 
           {/* Feature grid */}
           <div className="mt-6 grid grid-cols-2 gap-3">
@@ -129,7 +129,24 @@ export function AboutSection({
             </Link>
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Vasai, Maharashtra</span>
           </motion.div>
-        </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Admin-managed images + video (`home-about-gallery`) */}
+        {gallery.length ? (
+          <MediaMosaicGallery
+            items={gallery}
+            title="MSNSS"
+            id="about-gallery"
+            eyebrow="Inside MSNSS"
+            heading="Our work, up close"
+            description="Fabrication, dispatch and on-site installation — a look at the projects and processes behind every duct we deliver."
+            tone="light"
+            paddingClassName=""
+            className="mt-16 sm:mt-20"
+            containerClassName="w-full"
+          />
+        ) : null}
       </div>
     </section>
   );

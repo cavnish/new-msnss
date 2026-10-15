@@ -16,7 +16,10 @@ try {
 remotePatterns.push(
   // Cloudinary delivery (all cloud names are subdomains of res.cloudinary.com)
   { protocol: "https", hostname: "res.cloudinary.com" },
-  { protocol: "https", hostname: "**.cloudinary.com" }
+  { protocol: "https", hostname: "**.cloudinary.com" },
+  // Poster frames derived from YouTube video URLs in the product media gallery.
+  { protocol: "https", hostname: "i.ytimg.com" },
+  { protocol: "https", hostname: "img.youtube.com" }
 );
 
 const nextConfig: NextConfig = {
@@ -39,6 +42,19 @@ const nextConfig: NextConfig = {
   // (e.g. the Kilo worktree copy) don't shift the inferred workspace root.
   turbopack: {
     root: __dirname,
+  },
+
+  // Client-side router cache. The default keeps prefetched/static RSC payloads
+  // for 5 minutes, which means a visitor navigating with <Link> can browse an
+  // older page for up to 5 minutes after the admin published a change.
+  // 30s (the schema minimum for `static`) keeps navigation instant while
+  // guaranteeing a published edit reaches every client within half a minute;
+  // `dynamic: 0` (the default) already refetches dynamic payloads every time.
+  experimental: {
+    staleTimes: {
+      dynamic: 0,
+      static: 30,
+    },
   },
 
   // Long-lived caching for immutable build output and static media.

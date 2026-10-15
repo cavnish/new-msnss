@@ -3,6 +3,7 @@ import type {
   Client,
   MediaAsset,
   Product,
+  ProductImage,
   Project,
   ProjectImage,
   Service,
@@ -121,6 +122,24 @@ export const getProductBySlug = cache(async (slug: string): Promise<Product | nu
     (p) => p.slug === slug && p.active !== false
   );
   return (found as unknown as Product) ?? null;
+});
+
+/**
+ * Every gallery entry for a product (stills *and* videos), ordered for display.
+ *
+ * Served from the published snapshot like all other public reads — no database
+ * round-trip. Grouping by `type` (primary / gallery / CAD / onsite) and by
+ * `mediaType` (image / video) happens in the consumer, so this stays a single,
+ * cheap list read.
+ */
+export const getProductImages = cache(async (productId: number): Promise<ProductImage[]> => {
+  if (!Number.isFinite(productId)) return [];
+  const all = rows(await content(), "productImages") as Record<string, unknown>[];
+  return sorted(
+    all.filter((img) => img.productId === productId),
+    "sortOrder",
+    "id"
+  ) as unknown as ProductImage[];
 });
 
 export const getProjects = cache(async (status?: string): Promise<Project[]> => {
@@ -249,10 +268,13 @@ export const getMediaAssets = cache(async (folder?: string): Promise<MediaAsset[
 });
 
 /** Active catalogue for the public download flow (DB-free). */
-export const getActiveCatalogue = cache(async () => {
-  const all = activeOnly(rows(await content(), "catalogues") as Record<string, unknown>[]);
-  return (sorted(all, "id").at(-1) as unknown as Record<string, unknown>) ?? null;
-});
+export const getActiveCatalogue = cache(
+  async (): Promise<Record<string, unknown> | null> => {
+    const all = activeOnly(rows(await content(), "catalogues") as Record<string, unknown>[]);
+    const latest = sorted(all, "id").at(-1);
+    return (latest as unknown as Record<string, unknown>) ?? null;
+  }
+);
 
 /** Metadata about the currently served version — used by the health endpoint. */
 export async function getServedVersion() {
@@ -307,6 +329,9 @@ export const SECTION_KEYS = [
   "why-choose",
   "why-choose-map",
   "applications",
+  // Homepage media galleries — ordered images + videos, admin-managed.
+  "home-about-gallery",
+  "why-choose-gallery",
   // Single-image home slots — first active row wins, built-in default otherwise.
   "home-facility",
   "home-brief-bg",
@@ -337,3 +362,14 @@ export const getSectionMedia = cache(
       "id"
     ).filter((m) => m.sectionKey === sectionKey && m.active !== false)
 );
+
+/**
+ * A single `site_settings` value — used for page copy that has no dedicated
+ * table (currently the homepage "About" description). Reads the published
+ * snapshot like every other public lookup and returns "" when unset.
+ */
+export const getSiteSetting = cache(async (key: string): Promise<string> => {
+  const list = rows(await content(), "siteSettings") as Record<string, unknown>[];
+  const found = list.find((row) => row.key === key);
+  return found ? String(found.value ?? "") : "";
+});

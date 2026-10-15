@@ -14,6 +14,18 @@ export const showcaseItemInput = z.object({
   label: z.string().trim().max(160).optional().default(""),
 });
 
+/** One gallery entry: a role, a URL, accessible text, order, and whether it is an image or a video. */
+export const productImageInput = z.object({
+  url: z.string().trim().min(1).max(900),
+  /** "image" (default) or "video" — videos may be uploaded files or embeds. */
+  mediaType: z.enum(["image", "video"]).default("image"),
+  /** Optional video poster/thumbnail (ignored for images). */
+  posterUrl: z.string().trim().max(900).optional().default(""),
+  type: z.enum(["primary", "gallery", "CAD", "onsite"]).default("gallery"),
+  altText: z.string().trim().max(500).optional().default(""),
+  sortOrder: z.coerce.number().int().default(0),
+});
+
 export const productInput = z.object({
   name: z.string().trim().min(2).max(255),
   slug: z.string().optional(),
@@ -38,6 +50,9 @@ export const productInput = z.object({
     .array(z.string().trim().min(1).max(600))
     .max(6, "A product can have up to 6 hero/gallery images.")
     .default([]),
+  // Advanced gallery — the typed, ordered image relationship (product_images).
+  // The reconciler in the products API replaces rows only when this key is sent.
+  images: z.array(productImageInput).max(60).default([]),
   videoUrl: z.string().max(600).optional().nullable(),
   relatedProductIds: z.array(z.coerce.number().int().positive()).default([]),
   featured: z.boolean().default(false),
@@ -93,7 +108,7 @@ export const serviceInput = z.object({
 
 export const heroInput = z.object({title:z.string().trim().min(2).max(500),subtitle:z.string().trim().min(3).max(1500),supportingLine:z.string().max(1000).optional().nullable(),imageUrl:z.string().trim().min(1),videoUrl:z.string().max(600).optional().nullable(),primaryCtaLabel:z.string().max(120).optional().nullable(),primaryCtaLink:z.string().max(255).optional().nullable(),secondaryCtaLabel:z.string().max(120).optional().nullable(),secondaryCtaLink:z.string().max(255).optional().nullable(),sortOrder:z.coerce.number().int().default(0),active:z.boolean().default(true)});
 export const catalogueInput=z.object({title:z.string().trim().min(2).max(255),description:z.string().max(5000).optional().nullable(),fileUrl:z.string().trim().min(1),fileName:z.string().trim().min(1).max(255),active:z.boolean().default(false)});
-export const projectImageInput=z.object({projectId:z.coerce.number().int().positive().optional(),imageUrl:z.string().trim().min(1),title:z.string().max(255).optional().nullable(),altText:z.string().trim().min(2).max(500),description:z.string().max(3000).optional().nullable(),sortOrder:z.coerce.number().int().default(0)});
+export const projectImageInput=z.object({projectId:z.coerce.number().int().positive().optional(),imageUrl:z.string().trim().min(1),title:z.string().max(255).optional().nullable(),altText:z.string().trim().max(500).default(""),description:z.string().max(3000).optional().nullable(),sortOrder:z.coerce.number().int().default(0)});
 
 export const mediaAssetInput = z.object({
   publicId: z.string().trim().min(2).max(512).optional(),

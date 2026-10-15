@@ -7,8 +7,10 @@ import {
   EmptyState,
   Field,
   ImageField,
+  SectionMediaGalleryEditor,
   TableSkeleton,
   inputCls,
+  type SectionMediaValue,
 } from "@/components/admin/AdminUI";
 import type { SectionMedia } from "@/db/schema";
 
@@ -28,10 +30,15 @@ import type { SectionMedia } from "@/db/schema";
  *   • Multi-Image Sections tab:
  *       • "Why Industry Leaders Choose MSNSS" (tiles + centre map)
  *       • "Ducting Solutions Across Critical Applications" (grid tiles)
+ *   • Home Galleries tab (images + video walls, bento mosaic + lightbox):
+ *       1. About Section — Description   → homepage About intro paragraph
+ *       2. About Section Gallery         → `home-about-gallery`
+ *       3. Why Choose MSNSS — Gallery     → `why-choose-gallery`
  *
  * All uploads/replacements/deletions use the section_media CRUD & publish system,
  * syncing directly to PostgreSQL and publishing an atomic static content snapshot.
- * When deleted, slots instantly restore their built-in fallback defaults.
+ * When deleted, slots instantly restore their built-in fallback defaults. The
+ * gallery walls save their whole ordered list as one atomic publish.
  */
 
 const HOME_SLOTS = [
@@ -189,6 +196,43 @@ const MULTI_GROUPS = [
   },
 ] as const;
 
+/** `site_settings` key holding the homepage About intro paragraph. */
+const ABOUT_COPY_KEY = "home.about.description";
+
+/**
+ * Homepage media galleries — ordered images *and* videos rendered as a bento
+ * mosaic with a full-screen lightbox. Saved in one atomic request each.
+ */
+const GALLERY_GROUPS = [
+  {
+    key: "home-about-gallery",
+    label: "About Section Gallery",
+    hint: "Images and video inside the homepage About block (bento mosaic + lightbox). Leave empty to hide the gallery.",
+    emptyHint: "No media yet. Drag in images or video, or add a video by URL.",
+    anchor: "/#about",
+  },
+  {
+    key: "why-choose-gallery",
+    label: "Why Choose MSNSS — Media Gallery",
+    hint: "Images and video at the end of the “Why Industry Leaders Choose MSNSS” section.",
+    emptyHint: "No media yet. Drag in images or video, or add a video by URL.",
+    anchor: "/#why-choose",
+  },
+] as const;
+
+/** Ordered `section_media` rows → editor values (array order = display order). */
+function galleryValuesFromRows(rows: SectionMedia[], sectionKey: string): SectionMediaValue[] {
+  return rows
+    .filter((row) => row.sectionKey === sectionKey)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+    .map((row) => ({
+      url: row.imageUrl ?? "",
+      mediaType: row.mediaType === "video" ? "video" : "image",
+      altText: row.altText ?? "",
+      posterUrl: row.posterUrl ?? "",
+    }));
+}
+
 type MultiDraft = {
   id?: number;
   sectionKey: string;
@@ -214,7 +258,9 @@ export default function SectionsAdmin() {
   const [notice, setNotice] = useState<{ text: string; type: "success" | "error" | "info" } | null>(
     null
   );
-  const [activeTab, setActiveTab] = useState<SlotTabId | "multi-sections">("home-slots");
+  const [activeTab, setActiveTab] = useState<SlotTabId | "multi-sections" | "galleries">(
+    "home-slots"
+  );
 
   // Single Slot Modals
   const [previewModalSlot, setPreviewModalSlot] = useState<SingleSlot | null>(null);
@@ -226,12 +272,33 @@ export default function SectionsAdmin() {
   const [multiDraft, setMultiDraft] = useState<MultiDraft | null>(null);
   const [savingMulti, setSavingMulti] = useState(false);
 
+  // Homepage galleries (images + video) and the About description copy
+  const [galleryDrafts, setGalleryDrafts] = useState<Record<string, SectionMediaValue[]>>({});
+  const [savingGallery, setSavingGallery] = useState<string | null>(null);
+  const [copyDraft, setCopyDraft] = useState("");
+  const [copySaved, setCopySaved] = useState("");
+  const [savingCopy, setSavingCopy] = useState(false);
+
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/section-media");
-      if (!res.ok) throw new Error((await res.json()).error || "Unable to load section images");
-      setItems(await res.json());
+      const [mediaRes, copyRes] = await Promise.all([
+        fetch("/api/admin/section-media"),
+        fetch(`/api/admin/site-settings?key=${encodeURIComponent(ABOUT_COPY_KEY)}`),
+      ]);
+      if (!mediaRes.ok) throw new Error((await mediaRes.json()).error || "Unable to load section images");
+      const rows = (await mediaRes.json()) as SectionMedia[];
+      setItems(rows);
+      // Drafts mirror what is stored; re-seeded after every successful save.
+      setGalleryDrafts(
+        Object.fromEntries(GALLERY_GROUPS.map((group) => [group.key, galleryValuesFromRows(rows, group.key)]))
+      );
+      if (copyRes.ok) {
+        const copy = (await copyRes.json()) as { value?: string };
+        const value = String(copy.value ?? "");
+        setCopyDraft(value);
+        setCopySaved(value);
+      }
     } catch (e) {
       setNotice({ text: (e as Error).message, type: "error" });
     } finally {
@@ -402,6 +469,65 @@ export default function SectionsAdmin() {
     await load();
   }
 
+  /* ──────────────── Homepage Gallery & Copy Actions ──────────────── */
+
+  async function saveGallery(key: string) {
+    const draft = galleryDrafts[key] ?? [];
+    if (draft.some((item) => !item.url.trim())) {
+      setNotice({ text: "Every gallery item needs a media URL before saving.", type: "error" });
+      return;
+    }
+    setSavingGallery(key);
+    try {
+      const res = await fetch("/api/admin/section-media/bulk", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sectionKey: key,
+          items: draft.map((item) => ({
+            imageUrl: item.url.trim(),
+            mediaType: item.mediaType,
+            altText: item.altText.trim(),
+            posterUrl: item.posterUrl.trim(),
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unable to save the gallery");
+      setNotice({
+        text: `Gallery saved (${draft.length} item${draft.length === 1 ? "" : "s"}) and published live!`,
+        type: "success",
+      });
+      await load();
+    } catch (err) {
+      setNotice({ text: (err as Error).message, type: "error" });
+    } finally {
+      setSavingGallery(null);
+    }
+  }
+
+  async function saveAboutCopy(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingCopy(true);
+    try {
+      const res = await fetch("/api/admin/site-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: ABOUT_COPY_KEY, value: copyDraft }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unable to save the description");
+      const value = String(data.value ?? "");
+      setCopyDraft(value);
+      setCopySaved(value);
+      setNotice({ text: "About description saved and published live!", type: "success" });
+    } catch (err) {
+      setNotice({ text: (err as Error).message, type: "error" });
+    } finally {
+      setSavingCopy(false);
+    }
+  }
+
   // Count active custom slots (scoped to the current tab when a slot tab is open)
   const activeSlotTab = SLOT_TABS.find((t) => t.id === activeTab);
   const visibleSlots: readonly SingleSlot[] = activeSlotTab ? activeSlotTab.slots : SINGLE_SLOTS;
@@ -540,6 +666,23 @@ export default function SectionsAdmin() {
             }`}
           >
             Why Choose &amp; Applications
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("galleries")}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
+            activeTab === "galleries"
+              ? "border-brand text-brand"
+              : "border-transparent text-slate-600 hover:text-ink"
+          }`}
+        >
+          <span>Home Galleries</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+              activeTab === "galleries" ? "bg-brand/10 text-brand" : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            Images &amp; Video
           </span>
         </button>
       </div>
@@ -699,7 +842,7 @@ export default function SectionsAdmin() {
             })}
           </div>
         </div>
-      ) : (
+      ) : activeTab === "multi-sections" ? (
         /* ──────────────── Multi-Image Sections ──────────────── */
         <div className="space-y-8">
           {MULTI_GROUPS.map((group) => {
@@ -800,6 +943,96 @@ export default function SectionsAdmin() {
               </section>
             );
           })}
+        </div>
+      ) : (
+        /* ──────────────── Home Galleries (images + video) ──────────────── */
+        <div className="space-y-8">
+          {/* About description copy */}
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+            <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+              <h3 className="text-sm font-bold text-ink">About Section — Description</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Intro paragraph for the homepage About block, shown above the feature cards. Leave it
+                blank to hide the paragraph entirely.
+              </p>
+            </div>
+            <form onSubmit={saveAboutCopy} className="space-y-3 p-5">
+              <textarea
+                value={copyDraft}
+                onChange={(e) => setCopyDraft(e.target.value)}
+                rows={4}
+                maxLength={4000}
+                aria-label="About section description"
+                placeholder="MSNSS engineers, fabricates and installs MS & SS ducting for projects across India…"
+                className={inputCls}
+              />
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <span className="mr-auto text-[11px] font-semibold text-slate-400">
+                  {copyDraft.trim() === copySaved.trim() ? "No unsaved changes" : "Unsaved changes"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCopyDraft(copySaved)}
+                  disabled={copyDraft === copySaved}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Reset
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCopy || copyDraft.trim() === copySaved.trim()}
+                  className="rounded-lg bg-brand px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-dark disabled:opacity-50"
+                >
+                  {savingCopy ? "Saving & Publishing…" : "Save & Publish"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Media galleries */}
+          {GALLERY_GROUPS.map((group) => (
+            <section
+              key={group.key}
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs"
+            >
+              <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-ink">{group.label}</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">{group.hint}</p>
+                  </div>
+                  <Link
+                    href={group.anchor}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 text-[11px] font-semibold text-slate-500 hover:text-brand"
+                  >
+                    View on site →
+                  </Link>
+                </div>
+              </div>
+              <div className="space-y-4 p-5">
+                <SectionMediaGalleryEditor
+                  value={galleryDrafts[group.key] ?? []}
+                  onChange={(next) => setGalleryDrafts((prev) => ({ ...prev, [group.key]: next }))}
+                  label={group.label}
+                  slug={group.key}
+                  max={24}
+                  emptyHint={group.emptyHint}
+                />
+                <div className="flex justify-end border-t border-slate-200 pt-4">
+                  <button
+                    type="button"
+                    disabled={savingGallery === group.key}
+                    onClick={() => void saveGallery(group.key)}
+                    className="rounded-lg bg-brand px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-dark disabled:opacity-50"
+                  >
+                    {savingGallery === group.key ? "Saving & Publishing…" : "Save & Publish Gallery"}
+                  </button>
+                </div>
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

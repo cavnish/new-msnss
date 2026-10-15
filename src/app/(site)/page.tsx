@@ -22,8 +22,10 @@ import {
   getLogoRowClients,
   getProducts,
   getSectionMedia,
+  getSiteSetting,
   getTestimonials,
 } from "@/lib/queries";
+import { sectionMediaItems } from "@/lib/media";
 
 // Static-first: the page is generated once and re-validated on every publish.
 export const revalidate = 300;
@@ -40,21 +42,31 @@ const PLANT_MACHINERY = [
 export default async function HomePage() {
   // Card placement for every home grid is chosen by the admin through the
   // `showOnHome` / `homeOrder` fields in the CMS.
-  const [slides, featuredProducts, services, testimonials, logoClients, allProducts, homeImages] =
-    await Promise.all([
-      getHeroSlides(),
-      getHomeProducts(9),
-      getHomeServices(6),
-      getTestimonials(),
-      getLogoRowClients(),
-      getProducts(),
-      Promise.all([
-        getSectionMedia("home-facility"),
-        getSectionMedia("home-brief-bg"),
-        getSectionMedia("home-about-main"),
-        getSectionMedia("home-about-overlay"),
-      ]).catch(() => [[], [], [], []]),
-    ]);
+  const [
+    slides,
+    featuredProducts,
+    services,
+    testimonials,
+    logoClients,
+    allProducts,
+    homeImages,
+    aboutDescription,
+  ] = await Promise.all([
+    getHeroSlides(),
+    getHomeProducts(9),
+    getHomeServices(6),
+    getTestimonials(),
+    getLogoRowClients(),
+    getProducts(),
+    Promise.all([
+      getSectionMedia("home-facility"),
+      getSectionMedia("home-brief-bg"),
+      getSectionMedia("home-about-main"),
+      getSectionMedia("home-about-overlay"),
+      getSectionMedia("home-about-gallery"),
+    ]).catch(() => [[], [], [], [], []]),
+    getSiteSetting("home.about.description"),
+  ]);
 
   // Single-image home slots: first visible CMS row wins, built-in default otherwise.
   const firstRow = (rows: unknown) =>
@@ -75,6 +87,9 @@ export default async function HomePage() {
   const aboutOverlay = String(aboutOverlayRow?.imageUrl || "").trim() || "/images/hero-3.jpg";
   const aboutOverlayAlt = String(aboutOverlayRow?.altText || "").trim() || "MSNSS HVAC duct installation on site";
 
+  // Admin-managed images + video wall for the About block.
+  const aboutGallery = sectionMediaItems(homeImages[4] as Record<string, unknown>[]);
+
   return (
     <>
       <HeroPremium slides={slides} />
@@ -88,6 +103,8 @@ export default async function HomePage() {
         overlayImage={aboutOverlay}
         mainAlt={aboutMainAlt}
         overlayAlt={aboutOverlayAlt}
+        description={aboutDescription}
+        gallery={aboutGallery}
       />
 
       {/* Products */}
@@ -112,14 +129,9 @@ export default async function HomePage() {
             />
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl lg:whitespace-nowrap">
               Inside the MSNSS Manufacturing Facility
             </h2>
-            <p className="mt-4 text-slate-600">
-              Manufacturing is where quality begins. Our plant is fitted with
-              machines for accurate duct forming, cutting, bending, punching,
-              welding and finishing.
-            </p>
             <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-700">
               {PLANT_MACHINERY.map((m) => (
                 <div
@@ -183,14 +195,9 @@ export default async function HomePage() {
 
                 <div className="relative p-7 sm:p-11">
                   <span className="eyebrow text-sky-300">We&apos;re here to help</span>
-                  <h2 className="mt-4 text-balance text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.024em] text-white sm:text-4xl">
+                  <h2 className="mt-4 text-balance text-[1.75rem] font-extrabold leading-[1.1] tracking-[-0.024em] text-white sm:text-4xl lg:whitespace-nowrap">
                     Have a project in mind?
                   </h2>
-                  <p className="mt-4 max-w-md text-pretty text-sm leading-7 text-slate-300 sm:text-base">
-                    Share your drawings, specifications and production requirements.
-                    Our engineers will review them and come back to you with a clear
-                    next step.
-                  </p>
 
                   <ul className="mt-8 space-y-3.5">
                     <li>

@@ -47,13 +47,9 @@ export default async function SolutionsPage() {
               <span>Manufacturer · Fabricator · Installer</span>
               <span className="h-0.5 w-5 rounded-full bg-brand" />
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+            <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl lg:whitespace-nowrap">
               Support Across the Ducting Project Cycle
             </h2>
-            <p className="mt-4 leading-7 text-slate-600">
-              Browse the work currently offered by MSNSS. All published solution
-              content is controlled through the existing admin CMS.
-            </p>
           </MotionReveal>
 
           {/* Grid matching the premium product card design */}

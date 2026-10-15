@@ -3,8 +3,8 @@ import {
   buildSnapshotFromDatabase,
   enqueuePublish,
   getPublishStatus,
+  revalidatePublicSite,
 } from "@/lib/content-store";
-import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -28,19 +28,10 @@ export async function POST() {
   });
 
   if (result.ok) {
-    // New admin content must never be masked by a cached page.
-    for (const route of ["/", "/products", "/solutions", "/projects", "/catalogue"]) {
-      try {
-        revalidatePath(route);
-      } catch {
-        /* revalidate is best-effort outside a request scope */
-      }
-    }
-    try {
-      revalidatePath("/", "layout");
-    } catch {
-      /* ignore */
-    }
+    // New admin content must never be masked by a cached page. The publish
+    // pipeline already invalidates; doing it once more here guarantees the
+    // invalidation runs inside this request's scope.
+    await revalidatePublicSite();
   }
 
   return Response.json(result, { status: result.ok ? 200 : 500 });

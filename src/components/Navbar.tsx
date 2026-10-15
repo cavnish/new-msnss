@@ -466,11 +466,19 @@ export function Navbar({ products = [] }: NavbarProps) {
   }, []);
 
   // Keep the fixed mobile drawer aligned to the actual (responsive) header box.
+  // The measured height is also published as `--nav-h` so full-height sections
+  // (e.g. the home hero) can fill exactly one screen below the sticky header.
   useEffect(() => {
     const el = headerRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
+    if (!el) return;
+    const publish = (h: number) => {
+      setNavH(h);
+      document.documentElement.style.setProperty("--nav-h", `${h}px`);
+    };
+    publish(el.getBoundingClientRect().height);
+    if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver((entries) => {
-      for (const e of entries) setNavH(e.contentRect.height);
+      for (const e of entries) publish(e.contentRect.height);
     });
     ro.observe(el);
     return () => ro.disconnect();

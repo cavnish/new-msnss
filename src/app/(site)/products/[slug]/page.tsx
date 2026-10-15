@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CTASection } from "@/components/ui";
 import { FireRatedSection } from "@/components/FireRatedSection";
-import { ProductGallery } from "@/components/product/ProductGallery";
+import { ProductGallery, type ProductGalleryImage } from "@/components/product/ProductGallery";
+import { ProductMediaGallery, type MediaGalleryItem } from "@/components/product/ProductMediaGallery";
 import { ProductInfo } from "@/components/product/ProductInfo";
 import { ProductKeyFeatures } from "@/components/product/ProductKeyFeatures";
 import { ProductShowcase, type ShowcaseImageItem } from "@/components/product/ProductShowcase";
 import { ProductTechnicalDetails } from "@/components/product/ProductTechnicalDetails";
 import { ProductFAQ } from "@/components/product/ProductFAQ";
 import { ProductRelated } from "@/components/product/ProductRelated";
-import { getProductBySlug, getProducts, getProductsByIds, getProjects, getLogoRowClients } from "@/lib/queries";
+import { getProductBySlug, getProducts, getProductsByIds, getProductImages, getProjects, getLogoRowClients } from "@/lib/queries";
 import { ClientLogoRow } from "@/components/ClientLogoRow";
 
 export const revalidate = 300;
@@ -73,10 +74,11 @@ export default async function ProductDetailPage({
   if (!product) notFound();
 
   // Fetch all products to resolve related items
-  const [allProducts, projectsList, clientList] = await Promise.all([
+  const [allProducts, projectsList, clientList, galleryRows] = await Promise.all([
     getProducts(),
     getProjects().catch(() => []),
     getLogoRowClients().catch(() => []),
+    getProductImages(product.id).catch(() => []),
   ]);
 
   const relatedIds = (product.relatedProductIds ?? []).filter((id) => id !== product.id);
@@ -93,6 +95,56 @@ export default async function ProductDetailPage({
   related = related.slice(0, 8);
 
   const heroImage = product.imageUrl || "/images/factory.jpg";
+
+  // Advanced gallery — typed, ordered `product_images` rows. Older products
+  // without any rows fall back to their legacy `gallery` array, and a product
+  // with neither degrades to the single Main Image inside ProductGallery.
+  // The hero stage shows stills only; videos live in the media gallery below.
+  const galleryImages: ProductGalleryImage[] = galleryRows.length
+    ? galleryRows
+        .filter((img) => img.mediaType !== "video")
+        .map((img) => ({
+          url: img.url,
+          type: (img.type ?? "gallery") as ProductGalleryImage["type"],
+          alt:
+            img.altText ||
+            `${product.name} — ${img.type === "CAD" ? "technical drawing" : "product view"}`,
+        }))
+    : (product.gallery ?? [])
+        .filter((url) => typeof url === "string" && url.trim())
+        .map((url, i) => ({
+          url,
+          type: (i === 0 ? "primary" : "gallery") as ProductGalleryImage["type"],
+          alt: `${product.name} — view ${i + 1}`,
+        }));
+
+  // Media gallery — every gallery entry (stills *and* video) for the mosaic.
+  const mediaItems: MediaGalleryItem[] = galleryRows.length
+    ? galleryRows.map((img) => {
+        const isVideo = img.mediaType === "video";
+        const caption = (img.altText ?? "").trim();
+        return {
+          url: img.url,
+          mediaType: isVideo ? ("video" as const) : ("image" as const),
+          type: img.type ?? "gallery",
+          alt:
+            caption ||
+            (isVideo
+              ? `${product.name} — video`
+              : `${product.name} — ${img.type === "CAD" ? "technical drawing" : "product view"}`),
+          caption: caption || undefined,
+          posterUrl: img.posterUrl ?? "",
+        };
+      })
+    : (product.gallery ?? [])
+        .filter((url) => typeof url === "string" && url.trim())
+        .map((url, i) => ({
+          url,
+          mediaType: "image" as const,
+          type: i === 0 ? "primary" : "gallery",
+          alt: `${product.name} — view ${i + 1}`,
+          posterUrl: "",
+        }));
 
   // Hero — a single main image driven by the CMS "Main Image" field.
 
@@ -208,7 +260,7 @@ export default async function ProductDetailPage({
           <div className="grid items-stretch gap-6 lg:grid-cols-12 lg:gap-10 xl:gap-12">
             {/* LEFT — hero image */}
             <div className="min-w-0 lg:col-span-7 lg:flex lg:flex-col lg:justify-center">
-              <ProductGallery image={heroImage} title={product.name} />
+              <ProductGallery images={galleryImages} image={heroImage} title={product.name} />
             </div>
 
             {/* RIGHT — product identity, detail and CTAs */}
@@ -219,29 +271,32 @@ export default async function ProductDetailPage({
         </div>
       </section>
 
-      {/* ── 2. TECHNICAL INFORMATION + WHERE IT IS USED ─────────────────── */}
+      {/* ── 2. MEDIA GALLERY — admin-managed images & video ────────────── */}
+      <ProductMediaGallery items={mediaItems} title={product.name} />
+
+      {/* ── 3. TECHNICAL INFORMATION + WHERE IT IS USED ─────────────────── */}
       <ProductTechnicalDetails product={product} />
 
-      {/* ── 3. KEY FEATURES ────────────────────────────────────────────── */}
+      {/* ── 4. KEY FEATURES ────────────────────────────────────────────── */}
       <ProductKeyFeatures product={product} />
 
-      {/* ── 4. APPLICATION & RANGE SHOWCASE ────────────────────────────── */}
+      {/* ── 5. APPLICATION & RANGE SHOWCASE ────────────────────────────── */}
       <ProductShowcase images={showcaseImages} productTitle={product.name} />
 
-      {/* ── 5. RELATED PRODUCTS ────────────────────────────────────────── */}
+      {/* ── 6. RELATED PRODUCTS ────────────────────────────────────────── */}
       <ProductRelated products={related} />
 
-      {/* ── 5b. FIRE-RATED SOLUTIONS — CMS-managed photo (`home-fire-rated`).
+      {/* ── 6b. FIRE-RATED SOLUTIONS — CMS-managed photo (`home-fire-rated`).
           Skipped on the fire-rated product itself to avoid a self-link. ── */}
       {slug !== "fire-rated-duct" && <FireRatedSection />}
 
-      {/* ── 6. TRUSTED CLIENTS ─────────────────────────────────────────── */}
+      {/* ── 7. TRUSTED CLIENTS ─────────────────────────────────────────── */}
       <ClientLogoRow clients={clientList} />
 
-      {/* ── 7. FAQ ─────────────────────────────────────────────────────── */}
+      {/* ── 8. FAQ ─────────────────────────────────────────────────────── */}
       <ProductFAQ product={product} />
 
-      {/* ── 8. FINAL CTA ───────────────────────────────────────────────── */}
+      {/* ── 9. FINAL CTA ───────────────────────────────────────────────── */}
       <CTASection />
     </>
   );

@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { AdminPage, Modal, Field, inputCls, EmptyState, TableSkeleton, ListInput, ImageField, MediaListEditor, HomePlacementFields, OrderedListEditor, KeyValueListEditor, TabBar, TabPanel, type TabDef, type MediaListValue } from "@/components/admin/AdminUI";
+import { AdminPage, Modal, Field, inputCls, EmptyState, TableSkeleton, ListInput, ImageField, MediaListEditor, HomePlacementFields, OrderedListEditor, KeyValueListEditor, TabBar, TabPanel, ProductMediaGalleryEditor, type TabDef, type MediaListValue, type ProductMediaValue } from "@/components/admin/AdminUI";
 import { PRODUCT_CATEGORIES } from "@/lib/site";
-import type { Product } from "@/db/schema";
+import type { Product, ProductImage } from "@/db/schema";
+
+/** A product row as returned by the admin API — with its ordered gallery. */
+type AdminProduct = Product & { images?: ProductImage[] };
 
 /**
  * Editor sections. Three tabs: the product itself, its long-form
@@ -43,12 +46,14 @@ type Form = {
   longDescription: string;
   material: string;
   imageUrl: string;
+  images: ProductMediaValue[];
   applications: string;
   specifications: string;
   features: string;
   benefits: string;
   techSpecs: SpecRowForm[];
   manufacturingProcess: string;
+  manufacturingNarrative: string;
   installationInformation: string;
   maintenanceInformation: string;
   industries: string;
@@ -75,9 +80,9 @@ type Form = {
 
 const empty: Form = {
   name: "", slug: "", category: PRODUCT_CATEGORIES[0], shortDescription: "",
-  fullDescription: "", longDescription: "", material: "", imageUrl: "",
+  fullDescription: "", longDescription: "", material: "", imageUrl: "", images: [],
   applications: "", specifications: "", features: "", benefits: "", techSpecs: [],
-  manufacturingProcess: "", installationInformation: "", maintenanceInformation: "", industries: "",
+  manufacturingProcess: "", manufacturingNarrative: "", installationInformation: "", maintenanceInformation: "", industries: "",
   videoUrl: "", relatedProductIds: [], featured: false,
   showOnHome: true, homeOrder: 0, showcaseItems: [],
   h1: "", primaryKeyword: "", secondaryKeywords: "", seoTags: "",
@@ -87,15 +92,43 @@ const empty: Form = {
 
 const join = (a: string[] | null | undefined) => (a && a.length ? a.join("\n") : "");
 
-function toForm(p: Product): Form {
+/**
+ * Seed the advanced gallery from the stored `product_images` rows. Products
+ * created before the migration fall back to their legacy `gallery` array so no
+ * imagery is lost — saving the form then migrates it into the new table.
+ */
+function imagesToForm(p: AdminProduct): ProductMediaValue[] {
+  if (p.images && p.images.length) {
+    return p.images.map((img) => ({
+      url: img.url,
+      mediaType: img.mediaType === "video" ? "video" : "image",
+      type: (img.type ?? "gallery") as ProductMediaValue["type"],
+      altText: img.altText ?? "",
+      posterUrl: img.posterUrl ?? "",
+    }));
+  }
+  return (p.gallery ?? [])
+    .filter((u) => typeof u === "string" && u.trim())
+    .map((url, i) => ({
+      url,
+      mediaType: "image" as const,
+      type: i === 0 ? ("primary" as const) : ("gallery" as const),
+      altText: "",
+      posterUrl: "",
+    }));
+}
+
+function toForm(p: AdminProduct): Form {
   return {
     id: p.id, name: p.name, slug: p.slug, category: p.category,
     shortDescription: p.shortDescription, fullDescription: p.fullDescription,
     longDescription: p.longDescription ?? "", material: p.material ?? "",
-    imageUrl: p.imageUrl, applications: join(p.applications),
+    imageUrl: p.imageUrl,
+    images: imagesToForm(p), applications: join(p.applications),
     specifications: join(p.specifications), features: join(p.features), benefits: join(p.benefits),
     techSpecs: (p.technicalSpecifications ?? []).filter((s) => s && s.label && s.value),
     manufacturingProcess: join(p.manufacturingProcess),
+    manufacturingNarrative: p.manufacturingNarrative ?? "",
     installationInformation: join(p.installationInformation),
     maintenanceInformation: join(p.maintenanceInformation),
     industries: join(p.industries),
@@ -128,7 +161,7 @@ const splitList = (s: string) =>
     .filter(Boolean);
 
 export default function ProductsAdmin() {
-  const [items, setItems] = useState<Product[]>([]);
+  const [items, setItems] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<Form | null>(null);
   const [saving, setSaving] = useState(false);
@@ -139,9 +172,17 @@ export default function ProductsAdmin() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/admin/products");
-    setItems(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/products");
+      if (!res.ok) throw new Error("Unable to load products");
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setNotice((e as Error).message);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
     const selected = new URLSearchParams(window.location.search).get("category");
@@ -202,6 +243,16 @@ export default function ProductsAdmin() {
       showcaseItems: form.showcaseItems
         .filter((i) => i.url.trim())
         .map((i) => ({ type: i.type, url: i.url.trim(), label: (i.label || "").trim() })),
+      images: form.images
+        .filter((i) => i.url.trim() && !i.url.startsWith("blob:"))
+        .map((i, idx) => ({
+          url: i.url.trim(),
+          mediaType: i.mediaType === "video" ? "video" : "image",
+          posterUrl: i.mediaType === "video" ? (i.posterUrl || "").trim() : "",
+          type: i.type,
+          altText: (i.altText || "").trim(),
+          sortOrder: idx,
+        })),
       h1: form.h1.trim(),
       primaryKeyword: form.primaryKeyword.trim(),
       secondaryKeywords: splitList(form.secondaryKeywords),
@@ -315,6 +366,12 @@ export default function ProductsAdmin() {
 
               {/* The Main Image above is the product hero, card thumbnail and social-share image. */}
 
+              <ProductMediaGalleryEditor
+                value={form.images}
+                onChange={(images) => setForm({ ...form, images })}
+                slug={form.slug || form.name}
+              />
+
               <Field label="Short Description"><input className={inputCls} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} /></Field>
               <Field label="Full Description"><textarea rows={3} className={inputCls} value={form.fullDescription} onChange={(e) => setForm({ ...form, fullDescription: e.target.value })} /></Field>
               <Field label="Long Description (extended overview paragraph)"><textarea rows={4} className={inputCls} value={form.longDescription} onChange={(e) => setForm({ ...form, longDescription: e.target.value })} /></Field>
@@ -361,6 +418,9 @@ export default function ProductsAdmin() {
                   </Field>
                   <Field label="Supply Across India">
                     <textarea rows={3} className={inputCls} value={form.supplyAcrossIndia} onChange={(e) => setForm({ ...form, supplyAcrossIndia: e.target.value })} />
+                  </Field>
+                  <Field label="Manufacturing Narrative (long-form story)">
+                    <textarea rows={6} className={inputCls} value={form.manufacturingNarrative} onChange={(e) => setForm({ ...form, manufacturingNarrative: e.target.value })} placeholder="Long-form manufacturing story shown on the product page…" />
                   </Field>
                 </div>
               </div>

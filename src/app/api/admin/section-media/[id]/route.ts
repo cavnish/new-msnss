@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { sectionMedia } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/admin-api";
-import { sectionMediaInput } from "../route";
+import { normalizePoster, sectionMediaInput } from "../route";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +25,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         { error: parsed.error.issues[0]?.message || "Invalid section image" },
         { status: 400 }
       );
+    const { posterUrl, ...rest } = parsed.data;
     const [row] = await db
       .update(sectionMedia)
-      .set({ ...parsed.data, updatedAt: new Date() })
+      .set({
+        ...rest,
+        ...(posterUrl === undefined ? {} : { posterUrl: normalizePoster(posterUrl) }),
+        updatedAt: new Date(),
+      })
       .where(eq(sectionMedia.id, id))
       .returning();
     if (!row) return Response.json({ error: "Not found" }, { status: 404 });

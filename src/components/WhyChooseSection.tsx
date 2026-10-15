@@ -1,5 +1,7 @@
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
+import { MediaMosaicGallery } from "@/components/media/MediaMosaicGallery";
+import { sectionMediaItems } from "@/lib/media";
 import { getSectionMedia } from "@/lib/queries";
 
 /**
@@ -9,7 +11,8 @@ import { getSectionMedia } from "@/lib/queries";
  * pan-India delivery map in the centre, and stacked proof cards + stats on the
  * right. The tiles and the map are CMS-managed (`why-choose`, `why-choose-map`);
  * until the admin uploads anything, the built-in defaults below are used so the
- * section never renders empty.
+ * section never renders empty. A media gallery of admin-managed images and video
+ * (`why-choose-gallery`) closes the section.
  */
 
 const HIGHLIGHTS = [
@@ -98,10 +101,13 @@ function Icon({ name, className = "" }: { name: string; className?: string }) {
 }
 
 export async function WhyChooseSection() {
-  const [tileRows, mapRows] = await Promise.all([
+  const [tileRows, mapRows, galleryRows] = await Promise.all([
     getSectionMedia("why-choose"),
     getSectionMedia("why-choose-map"),
+    getSectionMedia("why-choose-gallery"),
   ]);
+
+  const gallery = sectionMediaItems(galleryRows);
 
   const tiles: Tile[] = tileRows.length
     ? tileRows.slice(0, 3).map((r) => ({
@@ -122,6 +128,7 @@ export async function WhyChooseSection() {
 
   return (
     <section
+      id="why-choose"
       aria-labelledby="why-msnss-heading"
       className="cv-auto relative overflow-hidden bg-[#0a0c11] py-14 sm:py-16 lg:py-20"
     >
@@ -136,26 +143,20 @@ export async function WhyChooseSection() {
       />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
-          {/* ── Left: statement + tiles ── */}
-          <div className="lg:col-span-4">
-            <h2
-              id="why-msnss-heading"
-              className="text-[26px] font-extrabold leading-[1.12] tracking-tight text-white sm:text-4xl"
-            >
-              Why <span className="text-brand">Industry Leaders</span>
-              <br />
-              Choose MSNSS
-            </h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400 sm:text-[15px] sm:leading-7">
-              MS &amp; SS HVAC ducting engineered around your load requirements,
-              approved drawings and site workflow — manufactured, finished and
-              installed by one accountable team.
-            </p>
+        {/* ── Statement heading — full width so it holds a single desktop line ── */}
+        <h2
+          id="why-msnss-heading"
+          className="text-[26px] font-extrabold leading-[1.12] tracking-tight text-white sm:text-4xl lg:whitespace-nowrap"
+        >
+          Why <span className="text-brand">Industry Leaders</span> Choose MSNSS
+        </h2>
 
+        <div className="mt-8 grid grid-cols-1 gap-10 lg:mt-10 lg:grid-cols-12 lg:gap-8">
+          {/* ── Left: CTA + tiles ── */}
+          <div className="lg:col-span-4">
             <Link
               href="/products"
-              className="btn-micro mt-7 inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-brand/25 hover:bg-brand-dark sm:text-sm"
+              className="btn-micro inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-3.5 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-brand/25 hover:bg-brand-dark sm:text-sm"
             >
               Explore Our Solutions
               <svg
@@ -267,6 +268,22 @@ export async function WhyChooseSection() {
             </div>
           </div>
         </div>
+
+        {/* Admin-managed images + video (`why-choose-gallery`) */}
+        {gallery.length ? (
+          <MediaMosaicGallery
+            items={gallery}
+            title="MSNSS"
+            id="why-choose-gallery"
+            eyebrow="Project Media"
+            heading="Built, delivered, installed"
+            description="Facility photography and site footage from recent MSNSS ducting projects across India."
+            tone="dark"
+            paddingClassName=""
+            className="mt-14 sm:mt-16"
+            containerClassName="w-full"
+          />
+        ) : null}
       </div>
     </section>
   );

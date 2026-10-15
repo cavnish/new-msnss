@@ -190,6 +190,11 @@ export default function HeroSlidesAdmin() {
           "image/png",
           "image/webp",
           "image/avif",
+          "image/gif",
+          "image/bmp",
+          "image/tiff",
+          "image/x-icon",
+          "image/svg+xml",
         ];
 
         if (

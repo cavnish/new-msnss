@@ -39,7 +39,7 @@ export async function ApplicationsSection() {
   return (
     <section className="cv-auto bg-white py-12 sm:py-14">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <h2 className="text-center text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+        <h2 className="text-center text-2xl font-extrabold tracking-tight text-ink sm:text-3xl lg:whitespace-nowrap">
           Ducting Solutions Across Critical Applications
         </h2>
 
