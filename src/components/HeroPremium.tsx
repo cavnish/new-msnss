@@ -43,7 +43,7 @@ function ControlArrow({ label, onClick, children }: { label: string; onClick: ()
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur transition hover:bg-white hover:text-[#071426]"
+      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white transition hover:bg-white hover:text-[#071426]"
     >
       {children}
     </button>
@@ -165,7 +165,7 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
                 </Link>
                 <Link
                   href={slide.secondaryCtaLink || "/contact"}
-                  className="inline-flex min-w-0 items-center justify-center gap-2 rounded-lg border border-white/40 bg-white/5 px-3.5 py-3 text-center text-xs font-bold text-white backdrop-blur transition hover:bg-white hover:text-[#071426] sm:px-7 sm:text-sm"
+                  className="inline-flex min-w-0 items-center justify-center gap-2 rounded-lg border border-white/40 bg-white/10 px-3.5 py-3 text-center text-xs font-bold text-white transition hover:bg-white hover:text-[#071426] sm:px-7 sm:text-sm"
                 >
                   <span className="truncate">{slide.secondaryCtaLabel || "Request a Quote"}</span>
                 </Link>
@@ -206,10 +206,11 @@ export function HeroPremium({ slides }: { slides: HeroSlide[] }) {
       {!paused && !reduce && count > 1 && (
         <motion.div
           key={current}
-          initial={{ width: "0%" }}
-          animate={{ width: "100%" }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
           transition={{ duration: AUTOPLAY / 1000, ease: "linear" }}
-          className="absolute bottom-0 left-0 z-30 h-[3px] bg-brand"
+          style={{ transformOrigin: "left" }}
+          className="absolute bottom-0 left-0 z-30 h-[3px] w-full bg-brand"
         />
       )}
     </section>

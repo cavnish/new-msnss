@@ -1,5 +1,6 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool, type QueryResult, type QueryResultRow } from "pg";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool, neonConfig, type QueryResult, type QueryResultRow } from "@neondatabase/serverless";
+import WebSocket from "ws";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -8,22 +9,29 @@ if (!databaseUrl) {
 }
 
 /**
- * pg-connection-string (pg v8.20+) emits a process warning whenever the
- * connection string uses `sslmode=prefer|require|verify-ca`, because those
- * modes are currently *aliases for verify-full* and will change meaning in
- * pg v9. The warning is surfaced by Next as a console error in dev.
+ * Transport selection.
  *
- * Rewriting them to `verify-full` is a no-op security-wise — it is exactly
- * what `require` already did — it only makes the intent explicit and silences
- * the warning. Anything else in the URL (user, password, host, channel_binding,
- * sslrootcert, ...) is left untouched.
+ * This project runs on Neon. The classic `pg` driver opens a raw TCP connection
+ * to the Postgres port (5432), which many real-world networks refuse to let
+ * through:
+ *
+ *   - Hostinger (Business/shared) and most shared hosts block outbound 5432.
+ *   - Corporate/office firewalls and VPN/security suites (e.g. McAfee, Proton
+ *     VPN) transparently intercept 5432: the TCP handshake appears to succeed,
+ *     but the Postgres startup packet is blackholed, so every query hangs until
+ *     it is reset. That surfaces in the app as a login request that stalls for
+ *     the connection timeout and then fails.
+ *
+ * Neon's serverless driver avoids the problem entirely by speaking the Postgres
+ * wire protocol over a WebSocket on the standard HTTPS port (443), which is
+ * almost always open. It is a drop-in `Pool`/`Client` replacement for `pg`, so
+ * Drizzle, the schema and the CMS write hook below are unchanged.
+ *
+ * `ws` provides the WebSocket implementation for Node versions that do not ship
+ * a global `WebSocket` (Node < 21, incl. Node 20 LTS as used by many hosts).
  */
-function normalizeSslMode(url: string): string {
-  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return url;
-  return url.replace(
-    /([?&]sslmode=)(prefer|require|verify-ca)(?=&|#|$)/gi,
-    "$1verify-full"
-  );
+if (typeof (globalThis as { WebSocket?: unknown }).WebSocket === "undefined") {
+  neonConfig.webSocketConstructor = WebSocket;
 }
 
 const globalForDb = globalThis as typeof globalThis & {
@@ -34,9 +42,9 @@ const globalForDb = globalThis as typeof globalThis & {
 export const pool =
   globalForDb.__arenaNextJsPostgresqlPool ??
   new Pool({
-    connectionString: normalizeSslMode(databaseUrl),
+    connectionString: databaseUrl,
     max: Number(process.env.PG_POOL_MAX ?? 10),
-    connectionTimeoutMillis: 5_000,
+    connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
   });
 
@@ -58,8 +66,12 @@ export const db = drizzle(pool);
  *
  * The returned promise does not resolve until the publish settles, so the admin
  * request reports publishing success or failure directly.
- * ─────────────────────────────────────────────────────────────────────────────
- */
+ *
+ * NOTE: Drizzle's Neon session issues every statement through `client.query(...)`
+ * where `client` is this pool, so wrapping `pool.query` still intercepts all
+ * reads and writes. (Only `db.transaction()` bypasses it via `pool.connect()`,
+ * which this codebase does not use.)
+ * ───────────────────────────────────────────────────────────────────────────── */
 
 const WRITE_RE = /^\s*(insert|update|delete|truncate|merge)\b/i;
 

@@ -90,20 +90,16 @@ export function Loader({ duration = 1500, eager = false, onComplete }: LoaderPro
           role="status"
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-[#070e18] select-none"
         >
-          {/* 1. Blurred duct photography backdrop (fast, cached from the site) */}
-          <motion.div
-            className="pointer-events-none absolute inset-0 opacity-25"
-            initial={reduce ? undefined : { scale: 1.08 }}
-            animate={reduce ? { opacity: 1 } : { scale: 1.16, opacity: 1 }}
-            transition={{ duration: reduce ? 0.1 : 14, ease: "easeOut" }}
-          >
+          {/* 1. Blurred duct photography backdrop (static — the old slow scale
+              forced the blurred full-screen bitmap to re-raster every frame) */}
+          <div className="pointer-events-none absolute inset-0 opacity-25">
             <img
               src="/images/factory.jpg"
               alt=""
               aria-hidden="true"
               className="h-full w-full object-cover blur-[7px] saturate-[0.85]"
             />
-          </motion.div>
+          </div>
 
           {/* 2. Cinematic vignette + brand tint */}
           <div
@@ -116,8 +112,8 @@ export function Loader({ duration = 1500, eager = false, onComplete }: LoaderPro
 
           {/* 3. Centered content: animated official MSNSS logo + linear progress */}
           <motion.div
-            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 14, filter: "blur(8px)" }}
-            animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 14 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: reduce ? 0.15 : 0.85, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-10 flex w-full flex-col items-center px-4 text-center"
           >

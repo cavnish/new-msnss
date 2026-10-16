@@ -139,7 +139,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 
 /* Universal image zoom on hover */
 .zoom-frame { overflow: hidden; }
-.zoom-frame img { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+.zoom-frame img { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
 .zoom-frame:hover img { transform: scale(1.07); }
 
 @keyframes kenburns {
@@ -191,7 +191,6 @@ h1, h2, h3 { letter-spacing: -0.015em; }
     background-color 0.22s ease,
     color 0.22s ease,
     border-color 0.22s ease;
-  will-change: transform;
 }
 .btn-micro:hover {
   transform: translateY(-2px);
@@ -206,7 +205,6 @@ h1, h2, h3 { letter-spacing: -0.015em; }
     transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.32s ease,
     border-color 0.32s ease;
-  will-change: transform;
 }
 .lift:hover {
   transform: translateY(-4px);
@@ -408,7 +406,6 @@ p {
     transform 0.28s var(--ease-out-expo),
     box-shadow 0.28s ease,
     filter 0.28s ease;
-  will-change: transform;
 }
 .btn-primary::after {
   content: "";
@@ -443,7 +440,6 @@ p {
     color 0.28s ease,
     border-color 0.28s ease,
     box-shadow 0.28s ease;
-  will-change: transform;
 }
 .btn-ghost:hover {
   transform: translateY(-2px);
@@ -464,7 +460,6 @@ p {
     transform 0.42s var(--ease-out-expo),
     box-shadow 0.42s ease,
     border-color 0.42s ease;
-  will-change: transform;
 }
 .card-premium:hover {
   transform: translateY(-6px);
@@ -534,17 +529,19 @@ p {
   transform-origin: left;
 }
 
-/* ── Reveal upgrades: fade + rise + de-blur ────────────────────────────── */
+/* ── Reveal upgrades: fade + rise ─────────────────────────────────────── */
+/* Perf note: this used to animate `filter: blur(8px) → 0`. Animating a filter
+   forces a full re-raster of the element (often large) every frame and was the
+   single biggest contributor to scroll raster cost. A clean opacity+rise keeps
+   the same premium feel entirely on the compositor. */
 @keyframes reveal-up-blur {
   from {
     opacity: 0;
-    transform: translateY(26px);
-    filter: blur(8px);
+    transform: translateY(22px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
@@ -567,7 +564,6 @@ p {
 
 /* ── Parallax / ambient motion ─────────────────────────────────────────── */
 .parallax-slow {
-  will-change: transform;
   transform: translate3d(0, 0, 0);
 }
 
@@ -584,14 +580,17 @@ p {
   animation: float-y 9s ease-in-out infinite;
 }
 
+/* Ambient aurora: translate + opacity only. Previously it also scaled the
+   element, which forced the large `blur()` glow behind it to re-raster every
+   frame. Drifting a cached blurred layer is essentially free. */
 @keyframes aurora {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
     opacity: 0.55;
   }
   50% {
-    transform: translate3d(4%, -3%, 0) scale(1.12);
+    transform: translate3d(4%, -3%, 0);
     opacity: 0.8;
   }
 }
@@ -599,23 +598,33 @@ p {
   animation: aurora 18s ease-in-out infinite;
 }
 
-/* Marquee-lite shimmer for dark hero bands */
+/* Marquee-lite sheen for dark hero bands.
+   Composited transform sweep instead of animating `background-position`
+   (which repaints the element on every frame). */
 @keyframes sheen {
   from {
-    background-position: -160% 0;
+    transform: translateX(-130%);
   }
   to {
-    background-position: 260% 0;
+    transform: translateX(430%);
   }
 }
 .animate-sheen {
+  overflow: hidden;
+}
+.animate-sheen::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
   background-image: linear-gradient(
     100deg,
     transparent 20%,
     rgba(255, 255, 255, 0.16) 42%,
     transparent 62%
   );
-  background-size: 200% 100%;
   animation: sheen 5.5s linear infinite;
 }
 
@@ -686,12 +695,14 @@ p {
   transform-style: preserve-3d;
   transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
   transition: transform 0.5s var(--ease-out-expo);
-  will-change: transform;
 }
 
-/* No transition lag while actively tracking — feels immediate. */
+/* No transition lag while actively tracking — feels immediate. `will-change`
+   is only applied while the pointer is engaged so idle cards don't each hold
+   a permanent compositor layer. */
 .tilt-root[data-active="true"] .tilt-inner {
   transition: transform 0.12s linear;
+  will-change: transform;
 }
 
 /* Depth-separated child layer. */
@@ -784,7 +795,6 @@ p {
   display: inline-flex;
   transform: translate3d(var(--mag-x), var(--mag-y), 0) scale(var(--mag-s));
   transition: transform 0.42s var(--ease-out-back);
-  will-change: transform;
 }
 .magnetic:active {
   transition: transform 0.12s ease;

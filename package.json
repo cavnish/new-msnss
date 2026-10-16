@@ -19,6 +19,7 @@
     "audit:product-sections": "node scripts/audit-product-sections.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
     "@supabase/supabase-js": "^2.112.4",
@@ -36,6 +37,7 @@
     "react-dom": "19.2.6",
     "resend": "^6.25.0",
     "three": "^0.180.0",
+    "ws": "^8.22.0",
     "zod": "^4.5.2"
   },
   "devDependencies": {
@@ -46,6 +48,7 @@
     "@types/pg": "8.18.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/ws": "^8.18.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
